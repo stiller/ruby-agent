@@ -1,4 +1,4 @@
-# ragent
+# Ruby Agent
 
 An agentic coding harness written in plain Ruby.
 
