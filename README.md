@@ -24,7 +24,13 @@ The workspace defaults to the `RAGENT_WORKSPACE` environment variable (default: 
 ## Running Tests
 
 ```bash
-bundle exec ruby -Itest test/test_ragent.rb
+bundle exec rake
+```
+
+To run a single test file:
+
+```bash
+bundle exec ruby -Itest test/ragent/tools/test_list_files.rb
 ```
 
 ## Docker
