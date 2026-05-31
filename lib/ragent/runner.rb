@@ -29,18 +29,37 @@ module Ragent
 
   def self.run(prompt, workspace: Workspace::DEFAULT_PATH)
     transcript = Transcript.new
-    result = AgentLoop.new(
+    loop = build_loop(prompt, workspace, transcript)
+    loop.on_tool_call = method(:print_tool_progress)
+    result = loop.run
+    transcript.close
+    print_result(result, transcript.run_dir)
+  end
+
+  def self.build_loop(prompt, workspace, transcript)
+    AgentLoop.new(
       prompt: prompt,
       repo_root: workspace,
       model_client: build_client(prompt),
       tool_registry: build_registry(workspace),
       transcript: transcript,
       system_prompt: build_system_prompt(workspace)
-    ).run
-    transcript.close
-    puts result
-    puts "Run saved to: #{transcript.run_dir}"
+    )
   end
+  private_class_method :build_loop
+
+  def self.print_tool_progress(tool, args)
+    parts = args.map { |k, v| "#{k}: #{v}" }.join(', ')
+    warn parts.empty? ? "[#{tool}]" : "[#{tool}] #{parts}"
+  end
+  private_class_method :print_tool_progress
+
+  def self.print_result(content, run_dir)
+    warn "\n=== Answer ==="
+    puts content
+    warn "\nRun saved to: #{run_dir}"
+  end
+  private_class_method :print_result
 
   def self.build_client(prompt)
     if ENV['OPENAI_API_KEY'].to_s.empty?

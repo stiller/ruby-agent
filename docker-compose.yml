@@ -6,3 +6,6 @@ services:
       - ${WORKSPACE_PATH:-./workspace}:/workspace
     environment:
       - RAGENT_WORKSPACE=/workspace
+      - OPENAI_API_KEY
+      - OPENAI_BASE_URL
+      - RAGENT_MODEL

@@ -4,6 +4,8 @@ module Ragent
   class AgentLoop
     MAX_ITERATIONS = 10
 
+    attr_writer :on_tool_call
+
     def initialize(prompt:, repo_root:, model_client:, tool_registry:,
                    max_iterations: MAX_ITERATIONS, transcript: nil, system_prompt: nil)
       @prompt = prompt
@@ -37,6 +39,7 @@ module Ragent
     def dispatch_tool_call(response, messages)
       raise "Unexpected response type: '#{response.type}'" unless response.type == 'tool_call'
 
+      @on_tool_call&.call(response.tool, response.args)
       messages << { role: 'assistant', tool_calls: [{ id: response.id, name: response.tool, args: response.args }] }
 
       result = @tool_registry.call(response.tool, response.args)

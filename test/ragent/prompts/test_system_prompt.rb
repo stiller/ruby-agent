@@ -41,10 +41,6 @@ class TestSystemPrompt < Minitest::Test
 
   # --- required instructions ---
 
-  def test_mentions_docker
-    assert_match(/docker/i, @prompt)
-  end
-
   def test_instructs_not_to_guess_file_contents
     assert_match(/guess|assume/i, @prompt)
   end

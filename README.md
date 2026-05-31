@@ -37,7 +37,32 @@ variables before running:
 
 ```bash
 export OPENAI_API_KEY=sk-...
-bin/ragent --repo /path/to/repo "list all Ruby files"
+bin/ragent --repo /path/to/repo "summarize this repo"
+```
+
+The harness prints each tool call to stderr as the agent works, then writes the
+final answer to stdout. Example session:
+
+```
+[list_files]
+[read_file] path: README.md
+[read_file] path: lib/ragent.rb
+[search_text] query: def run
+
+=== Answer ===
+
+This is a plain-Ruby CLI that sends a prompt to an OpenAI-compatible model and
+lets it explore a target repository through three read-only tools: list_files,
+read_file, and search_text. Each run writes a JSONL transcript to /tmp/ragent-runs/.
+
+Run saved to: /tmp/ragent-runs/20260531-143012-abc123
+```
+
+Because tool-call progress goes to stderr and the final answer goes to stdout,
+you can capture just the answer:
+
+```bash
+bin/ragent --repo /path/to/repo "summarize this repo" > answer.txt
 ```
 
 ### Using a local model (e.g. Ollama)

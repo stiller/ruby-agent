@@ -81,6 +81,35 @@ class TestAgentLoop < Minitest::Test
     assert_match 'exceeded maximum', err.message
   end
 
+  # --- on_tool_call callback ---
+
+  def test_on_tool_call_fires_with_tool_name_and_args
+    fired = []
+    loop = build_loop(Ragent::FakeModelClient.new([
+                                                    tool_call('echo', { message: 'hi' }),
+                                                    final('done')
+                                                  ]))
+    loop.on_tool_call = ->(t, a) { fired << [t, a] }
+    loop.run
+    assert_equal [['echo', { message: 'hi' }]], fired
+  end
+
+  def test_on_tool_call_fires_for_each_tool_call
+    fired = []
+    loop = build_loop(Ragent::FakeModelClient.new([
+                                                    tool_call('echo', { message: 'one' }),
+                                                    tool_call('echo', { message: 'two' }),
+                                                    final('done')
+                                                  ]))
+    loop.on_tool_call = ->(t, _a) { fired << t }
+    loop.run
+    assert_equal %w[echo echo], fired
+  end
+
+  def test_on_tool_call_not_required
+    assert_equal 'Done.', run_loop([final('Done.')])
+  end
+
   # --- errors ---
 
   def test_raises_on_unknown_tool
