@@ -1,0 +1,13 @@
+#!/usr/bin/env ruby
+
+$LOAD_PATH.unshift(File.join(__dir__, "..", "lib"))
+require "ragent"
+
+prompt = ARGV[0]
+
+if prompt.nil? || prompt.strip.empty?
+  puts "Usage: ragent \"your prompt here\""
+  exit 1
+end
+
+Ragent.run(prompt)
