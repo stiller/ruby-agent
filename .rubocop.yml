@@ -22,6 +22,6 @@ Metrics/CyclomaticComplexity:
 Metrics/ClassLength:
   Max: 150
 
-# AgentLoop initializer has six named keyword args; all are meaningful.
+# AgentLoop initializer has several named keyword args; all are meaningful.
 Metrics/ParameterLists:
-  Max: 6
+  Max: 7

@@ -5,18 +5,21 @@ module Ragent
     MAX_ITERATIONS = 10
 
     def initialize(prompt:, repo_root:, model_client:, tool_registry:,
-                   max_iterations: MAX_ITERATIONS, transcript: nil)
+                   max_iterations: MAX_ITERATIONS, transcript: nil, system_prompt: nil)
       @prompt = prompt
       @repo_root = repo_root
       @model_client = model_client
       @tool_registry = tool_registry
       @max_iterations = max_iterations
       @transcript = transcript
+      @system_prompt = system_prompt
     end
 
     def run
       @transcript&.log_prompt(@prompt)
-      messages = [{ role: 'user', content: @prompt }]
+      messages = []
+      messages << { role: 'system', content: @system_prompt.to_s } if @system_prompt
+      messages << { role: 'user', content: @prompt }
 
       @max_iterations.times do
         response = @model_client.call(messages)

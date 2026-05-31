@@ -29,16 +29,14 @@ module Ragent
 
   def self.run(prompt, workspace: Workspace::DEFAULT_PATH)
     transcript = Transcript.new
-    client = build_client(prompt)
-
     result = AgentLoop.new(
       prompt: prompt,
       repo_root: workspace,
-      model_client: client,
+      model_client: build_client(prompt),
       tool_registry: build_registry(workspace),
-      transcript: transcript
+      transcript: transcript,
+      system_prompt: build_system_prompt(workspace)
     ).run
-
     transcript.close
     puts result
     puts "Run saved to: #{transcript.run_dir}"
@@ -55,6 +53,11 @@ module Ragent
     end
   end
   private_class_method :build_client
+
+  def self.build_system_prompt(workspace)
+    Prompts::SystemPrompt.new(repo_root: workspace, tools: TOOL_DEFINITIONS.map(&:name))
+  end
+  private_class_method :build_system_prompt
 
   def self.build_registry(workspace)
     ToolRegistry.new.tap do |r|

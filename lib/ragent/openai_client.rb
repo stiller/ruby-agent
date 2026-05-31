@@ -41,20 +41,22 @@ module Ragent
 
     def serialize_message(msg)
       case msg[:role]
-      when 'user'
-        { role: 'user', content: msg[:content] }
-      when 'assistant'
-        tc = msg[:tool_calls].first
-        {
-          role: 'assistant', content: nil,
-          tool_calls: [{
-            id: tc[:id].to_s, type: 'function',
-            function: { name: tc[:name], arguments: JSON.generate(tc[:args] || {}) }
-          }]
-        }
-      when 'tool'
-        { role: 'tool', tool_call_id: msg[:tool_call_id].to_s, content: msg[:content].to_s }
+      when 'system'    then { role: 'system', content: msg[:content] }
+      when 'user'      then { role: 'user', content: msg[:content] }
+      when 'assistant' then serialize_assistant(msg)
+      when 'tool'      then { role: 'tool', tool_call_id: msg[:tool_call_id].to_s, content: msg[:content].to_s }
       end
+    end
+
+    def serialize_assistant(msg)
+      tc = msg[:tool_calls].first
+      {
+        role: 'assistant', content: nil,
+        tool_calls: [{
+          id: tc[:id].to_s, type: 'function',
+          function: { name: tc[:name], arguments: JSON.generate(tc[:args] || {}) }
+        }]
+      }
     end
 
     def post(path, body)
