@@ -34,9 +34,11 @@ module Ragent
     def dispatch_tool_call(response, messages)
       raise "Unexpected response type: '#{response.type}'" unless response.type == 'tool_call'
 
+      messages << { role: 'assistant', tool_calls: [{ id: response.id, name: response.tool, args: response.args }] }
+
       result = @tool_registry.call(response.tool, response.args)
       @transcript&.log_tool_result(response.tool, result)
-      messages << { role: 'tool_result', tool: response.tool, content: result.to_s }
+      messages << { role: 'tool', tool_call_id: response.id, content: result.to_s }
     end
   end
 end

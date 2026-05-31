@@ -62,7 +62,7 @@ class TestAgentLoop < Minitest::Test
     build_loop(client).run
 
     assert_equal 1, message_counts[0]  # first call: just the user prompt
-    assert_equal 2, message_counts[1]  # second call: prompt + tool_result
+    assert_equal 3, message_counts[1]  # second call: prompt + assistant_tool_call + tool_result
   end
 
   # --- limits ---

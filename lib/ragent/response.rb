@@ -6,7 +6,7 @@ module Ragent
       def type = 'final'
     end
 
-    ToolCall = Struct.new(:tool, :args, keyword_init: true) do
+    ToolCall = Struct.new(:tool, :args, :id, keyword_init: true) do
       def type = 'tool_call'
     end
   end
