@@ -2,12 +2,29 @@
 
 $LOAD_PATH.unshift(File.join(__dir__, "..", "lib"))
 require "ragent"
+require "optparse"
+
+options = { workspace: Ragent::Workspace::DEFAULT_PATH }
+
+OptionParser.new do |opts|
+  opts.banner = "Usage: ragent [options] \"your prompt here\""
+  opts.on("--repo PATH", "Path to the target repository (default: /workspace)") do |path|
+    options[:workspace] = path
+  end
+end.parse!
 
 prompt = ARGV[0]
 
 if prompt.nil? || prompt.strip.empty?
-  puts "Usage: ragent \"your prompt here\""
+  $stderr.puts "Usage: ragent [options] \"your prompt here\""
   exit 1
 end
 
-Ragent.run(prompt)
+begin
+  workspace = Ragent::Workspace.validate!(options[:workspace])
+rescue Ragent::WorkspaceError => e
+  $stderr.puts "Error: #{e.message}"
+  exit 1
+end
+
+Ragent.run(prompt, workspace: workspace)
