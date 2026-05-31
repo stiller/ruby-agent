@@ -1,4 +1,6 @@
-require "pathname"
+# frozen_string_literal: true
+
+require 'pathname'
 
 module Ragent
   class FileTooLargeError < StandardError; end
@@ -28,9 +30,7 @@ module Ragent
         end
 
         size = real.size
-        if size > @max_size
-          raise FileTooLargeError, "'#{relative_path}' is #{size} bytes, limit is #{@max_size} bytes"
-        end
+        raise FileTooLargeError, "'#{relative_path}' is #{size} bytes, limit is #{@max_size} bytes" if size > @max_size
 
         Result.new(path: relative_path, content: real.read, size: size, truncated: false)
       end
@@ -38,7 +38,7 @@ module Ragent
       private
 
       def traversal?(path)
-        Pathname.new(path).each_filename.any? { |part| part == ".." }
+        Pathname.new(path).each_filename.any? { |part| part == '..' }
       end
     end
   end

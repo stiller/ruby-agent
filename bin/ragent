@@ -1,14 +1,15 @@
 #!/usr/bin/env ruby
+# frozen_string_literal: true
 
-$LOAD_PATH.unshift(File.join(__dir__, "..", "lib"))
-require "ragent"
-require "optparse"
+$LOAD_PATH.unshift(File.join(__dir__, '..', 'lib'))
+require 'ragent'
+require 'optparse'
 
 options = { workspace: Ragent::Workspace::DEFAULT_PATH }
 
 OptionParser.new do |opts|
-  opts.banner = "Usage: ragent [options] \"your prompt here\""
-  opts.on("--repo PATH", "Path to the target repository (default: /workspace)") do |path|
+  opts.banner = 'Usage: ragent [options] "your prompt here"'
+  opts.on('--repo PATH', 'Path to the target repository (default: /workspace)') do |path|
     options[:workspace] = path
   end
 end.parse!
@@ -16,14 +17,14 @@ end.parse!
 prompt = ARGV[0]
 
 if prompt.nil? || prompt.strip.empty?
-  $stderr.puts "Usage: ragent [options] \"your prompt here\""
+  warn 'Usage: ragent [options] "your prompt here"'
   exit 1
 end
 
 begin
   workspace = Ragent::Workspace.validate!(options[:workspace])
 rescue Ragent::WorkspaceError => e
-  $stderr.puts "Error: #{e.message}"
+  warn "Error: #{e.message}"
   exit 1
 end
 

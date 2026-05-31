@@ -1,5 +1,7 @@
-require "find"
-require "pathname"
+# frozen_string_literal: true
+
+require 'find'
+require 'pathname'
 
 module Ragent
   module Tools
@@ -24,9 +26,7 @@ module Ragent
               next
             end
 
-            if pn.symlink?
-              next unless safe_symlink?(pn)
-            end
+            next if pn.symlink? && !safe_symlink?(pn)
 
             next unless pn.file?
 

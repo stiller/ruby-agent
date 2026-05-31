@@ -1,4 +1,6 @@
-source "https://rubygems.org"
+# frozen_string_literal: true
 
-gem "minitest", "~> 5.0", group: :test
-gem "rake", group: :test
+source 'https://rubygems.org'
+
+gem 'minitest', '~> 5.0', group: :test
+gem 'rake', group: :test
