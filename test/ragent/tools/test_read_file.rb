@@ -28,7 +28,7 @@ class TestReadFile < Minitest::Test
 
   def test_returns_correct_size
     write('hello.rb', 'abc')
-    assert_equal 3, read('hello.rb').size
+    assert_equal 3, read('hello.rb').byte_size
   end
 
   def test_truncated_is_always_false
@@ -46,7 +46,7 @@ class TestReadFile < Minitest::Test
     write('empty.rb', '')
     result = read('empty.rb')
     assert_equal '', result.content
-    assert_equal 0, result.size
+    assert_equal 0, result.byte_size
   end
 
   # --- missing files ---
@@ -92,7 +92,7 @@ class TestReadFile < Minitest::Test
   def test_reads_file_exactly_at_limit
     write('edge.rb', 'x' * 100)
     result = reader(max_size: 100).call('edge.rb')
-    assert_equal 100, result.size
+    assert_equal 100, result.byte_size
   end
 
   # --- symlink safety ---

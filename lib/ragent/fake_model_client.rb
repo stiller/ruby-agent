@@ -3,6 +3,7 @@
 module Ragent
   class FakeModelClient < ModelClient
     def initialize(responses)
+      super()
       @responses = responses.dup
     end
 

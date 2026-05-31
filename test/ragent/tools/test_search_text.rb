@@ -97,32 +97,32 @@ class TestSearchText < Minitest::Test
   def test_ignores_git_directory
     FileUtils.mkdir_p(File.join(@dir, '.git'))
     write('.git/config', "needle\n")
-    assert search('needle').none? { |m| m.path.start_with?('.git') }
+    assert(search('needle').none? { |m| m.path.start_with?('.git') })
   end
 
   def test_ignores_node_modules
     write('node_modules/pkg/index.js', "needle\n")
-    assert search('needle').none? { |m| m.path.start_with?('node_modules') }
+    assert(search('needle').none? { |m| m.path.start_with?('node_modules') })
   end
 
   def test_ignores_vendor
     write('vendor/gem/lib.rb', "needle\n")
-    assert search('needle').none? { |m| m.path.start_with?('vendor') }
+    assert(search('needle').none? { |m| m.path.start_with?('vendor') })
   end
 
   def test_ignores_tmp
     write('tmp/cache', "needle\n")
-    assert search('needle').none? { |m| m.path.start_with?('tmp') }
+    assert(search('needle').none? { |m| m.path.start_with?('tmp') })
   end
 
   def test_ignores_log
     write('log/dev.log', "needle\n")
-    assert search('needle').none? { |m| m.path.start_with?('log') }
+    assert(search('needle').none? { |m| m.path.start_with?('log') })
   end
 
   def test_ignores_bundle
     write('.bundle/config', "needle\n")
-    assert search('needle').none? { |m| m.path.start_with?('.bundle') }
+    assert(search('needle').none? { |m| m.path.start_with?('.bundle') })
   end
 
   # --- symlink safety ---

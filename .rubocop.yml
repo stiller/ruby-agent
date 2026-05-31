@@ -1,0 +1,23 @@
+AllCops:
+  TargetRubyVersion: 3.0
+  NewCops: enable
+
+# Internal classes in a small CLI don't need API docs.
+Style/Documentation:
+  Enabled: false
+
+# The traversal/validation methods are naturally verbose; 15 is more realistic.
+Metrics/MethodLength:
+  Max: 15
+
+# Register blocks count as many branches; 25 keeps the meaningful outliers visible.
+Metrics/AbcSize:
+  Max: 25
+
+# Find traversal needs multiple guards; 10 is a sensible ceiling.
+Metrics/CyclomaticComplexity:
+  Max: 10
+
+# Test classes with one case per behaviour legitimately run long.
+Metrics/ClassLength:
+  Max: 120

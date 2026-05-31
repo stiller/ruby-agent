@@ -35,32 +35,32 @@ class TestListFiles < Minitest::Test
 
   def test_ignores_git
     touch_inside('.git', 'HEAD')
-    assert list.none? { |f| f.start_with?('.git') }
+    assert(list.none? { |f| f.start_with?('.git') })
   end
 
   def test_ignores_node_modules
     touch_inside('node_modules/lodash', 'index.js')
-    assert list.none? { |f| f.start_with?('node_modules') }
+    assert(list.none? { |f| f.start_with?('node_modules') })
   end
 
   def test_ignores_vendor
     touch_inside('vendor/bundle', 'gem.rb')
-    assert list.none? { |f| f.start_with?('vendor') }
+    assert(list.none? { |f| f.start_with?('vendor') })
   end
 
   def test_ignores_tmp
     touch_inside('tmp', 'cache.txt')
-    assert list.none? { |f| f.start_with?('tmp') }
+    assert(list.none? { |f| f.start_with?('tmp') })
   end
 
   def test_ignores_log
     touch_inside('log', 'development.log')
-    assert list.none? { |f| f.start_with?('log') }
+    assert(list.none? { |f| f.start_with?('log') })
   end
 
   def test_ignores_bundle
     touch_inside('.bundle', 'config')
-    assert list.none? { |f| f.start_with?('.bundle') }
+    assert(list.none? { |f| f.start_with?('.bundle') })
   end
 
   def test_does_not_ignore_files_that_share_a_prefix_with_ignored_dirs
@@ -93,7 +93,7 @@ class TestListFiles < Minitest::Test
     File.write(secret, 'secret')
     File.symlink(secret, File.join(@dir, 'escape.txt'))
 
-    assert list.none? { |f| f.include?('escape') || f.include?('secret') }
+    assert(list.none? { |f| f.include?('escape') || f.include?('secret') })
   ensure
     FileUtils.rm_rf(outside)
   end
@@ -110,7 +110,7 @@ class TestListFiles < Minitest::Test
 
   def test_skips_broken_symlinks
     File.symlink('/nonexistent/path', File.join(@dir, 'broken.txt'))
-    assert list.none? { |f| f.include?('broken') }
+    assert(list.none? { |f| f.include?('broken') })
   end
 
   private

@@ -1,7 +1,10 @@
 {
   "permissions": {
     "allow": [
-      "Bash(ruby *)"
+      "Bash(ruby *)",
+      "Bash(bundle exec *)",
+      "Bash(rubocop)",
+      "Bash(grep -v \"^$\")"
     ]
   }
 }

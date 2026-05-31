@@ -9,7 +9,7 @@ module Ragent
     class ReadFile
       MAX_SIZE = 100 * 1024  # 100 KB
 
-      Result = Struct.new(:path, :content, :size, :truncated, keyword_init: true)
+      Result = Struct.new(:path, :content, :byte_size, :truncated, keyword_init: true)
 
       def initialize(repo_root, max_size: MAX_SIZE)
         @repo_root = Pathname.new(File.realpath(repo_root))
@@ -29,10 +29,13 @@ module Ragent
           raise ArgumentError, "path '#{relative_path}' escapes the repo root"
         end
 
-        size = real.size
-        raise FileTooLargeError, "'#{relative_path}' is #{size} bytes, limit is #{@max_size} bytes" if size > @max_size
+        byte_size = real.size
+        if byte_size > @max_size
+          raise FileTooLargeError,
+                "'#{relative_path}' is #{byte_size} bytes, limit is #{@max_size} bytes"
+        end
 
-        Result.new(path: relative_path, content: real.read, size: size, truncated: false)
+        Result.new(path: relative_path, content: real.read, byte_size: byte_size, truncated: false)
       end
 
       private

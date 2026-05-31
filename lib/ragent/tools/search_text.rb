@@ -70,8 +70,8 @@ module Ragent
         true
       end
 
-      def safe_symlink?(pn)
-        real = Pathname.new(File.realpath(pn.to_s))
+      def safe_symlink?(pathname)
+        real = Pathname.new(File.realpath(pathname.to_s))
         real.to_s.start_with?("#{@repo_root}/")
       rescue Errno::ENOENT
         false

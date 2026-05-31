@@ -1,32 +1,28 @@
 # frozen_string_literal: true
 
 require 'minitest/autorun'
+require 'tmpdir'
 require_relative '../lib/ragent'
 
 class TestRagent < Minitest::Test
-  def test_run_prints_prompt
+  def test_run_prints_final_answer
     Dir.mktmpdir do |dir|
       out, = capture_io { Ragent.run('hello', workspace: dir) }
-      assert_match 'Received prompt: hello', out
+      assert_match '[fake] Received: hello', out
     end
   end
 
-  def test_run_prints_workspace
-    Dir.mktmpdir do |dir|
-      out, = capture_io { Ragent.run('hello', workspace: dir) }
-      assert_match "Workspace: #{dir}", out
-    end
-  end
-
-  def test_run_defaults_to_env_workspace
-    out, = capture_io { Ragent.run('hello') }
-    assert_match "Workspace: #{Ragent::Workspace::DEFAULT_PATH}", out
-  end
-
-  def test_run_with_longer_prompt
+  def test_run_uses_prompt_in_answer
     Dir.mktmpdir do |dir|
       out, = capture_io { Ragent.run('build me a web app', workspace: dir) }
-      assert_match 'Received prompt: build me a web app', out
+      assert_match '[fake] Received: build me a web app', out
+    end
+  end
+
+  def test_run_returns_final_answer
+    Dir.mktmpdir do |dir|
+      out, = capture_io { Ragent.run('inspect this', workspace: dir) }
+      assert_match '[fake] Received: inspect this', out
     end
   end
 end
