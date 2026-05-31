@@ -2,6 +2,7 @@
 
 module Ragent
   def self.run(prompt, workspace: Workspace::DEFAULT_PATH)
+    transcript = Transcript.new
     client = FakeModelClient.new([
                                    Response::ToolCall.new(tool: 'list_files', args: {}),
                                    Response::Final.new(content: "[fake] Received: #{prompt}")
@@ -11,10 +12,13 @@ module Ragent
       prompt: prompt,
       repo_root: workspace,
       model_client: client,
-      tool_registry: build_registry(workspace)
+      tool_registry: build_registry(workspace),
+      transcript: transcript
     ).run
 
+    transcript.close
     puts result
+    puts "Run saved to: #{transcript.run_dir}"
   end
 
   def self.build_registry(workspace)

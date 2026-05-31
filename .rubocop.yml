@@ -20,4 +20,8 @@ Metrics/CyclomaticComplexity:
 
 # Test classes with one case per behaviour legitimately run long.
 Metrics/ClassLength:
-  Max: 120
+  Max: 130
+
+# AgentLoop initializer has six named keyword args; all are meaningful.
+Metrics/ParameterLists:
+  Max: 6
