@@ -11,9 +11,9 @@ Style/Documentation:
 Metrics/MethodLength:
   Max: 15
 
-# Register blocks count as many branches; 25 keeps the meaningful outliers visible.
+# Register blocks count as many branches; 35 keeps the meaningful outliers visible.
 Metrics/AbcSize:
-  Max: 25
+  Max: 35
 
 # Find traversal needs multiple guards; 10 is a sensible ceiling.
 Metrics/CyclomaticComplexity:

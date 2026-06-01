@@ -24,6 +24,15 @@ module Ragent
         properties: { query: { type: 'string', description: 'The text to search for.' } },
         required: ['query']
       }
+    ),
+    ToolDefinition.new(
+      name: 'propose_patch',
+      description: 'Propose a code change as a unified diff. Saved for review but NOT applied.',
+      parameters: {
+        type: 'object',
+        properties: { diff: { type: 'string', description: 'A unified diff in standard unified format.' } },
+        required: ['diff']
+      }
     )
   ].freeze
 
@@ -41,7 +50,7 @@ module Ragent
       prompt: prompt,
       repo_root: workspace,
       model_client: build_client(prompt),
-      tool_registry: build_registry(workspace),
+      tool_registry: build_registry(workspace, run_dir: transcript.run_dir),
       transcript: transcript,
       system_prompt: build_system_prompt(workspace)
     )
@@ -49,10 +58,16 @@ module Ragent
   private_class_method :build_loop
 
   def self.print_tool_progress(tool, args)
-    parts = args.map { |k, v| "#{k}: #{v}" }.join(', ')
+    parts = args.map { |k, v| "#{k}: #{format_arg(v)}" }.join(', ')
     warn parts.empty? ? "[#{tool}]" : "[#{tool}] #{parts}"
   end
   private_class_method :print_tool_progress
+
+  def self.format_arg(val, max = 80)
+    s = val.to_s.gsub(/\s+/, ' ').strip
+    s.length > max ? "#{s[0, max]}…" : s
+  end
+  private_class_method :format_arg
 
   def self.print_result(content, run_dir)
     warn "\n=== Answer ==="
@@ -78,13 +93,17 @@ module Ragent
   end
   private_class_method :build_system_prompt
 
-  def self.build_registry(workspace)
+  def self.build_registry(workspace, run_dir:)
+    get = ->(args, k) { args[k.to_sym] || args[k.to_s] }
     ToolRegistry.new.tap do |r|
       r.register('list_files') { |_args| Tools::ListFiles.new(workspace).call.join("\n") }
-      r.register('read_file') { |args| Tools::ReadFile.new(workspace).call(args[:path] || args['path']).content }
+      r.register('read_file') { |args| Tools::ReadFile.new(workspace).call(get.call(args, 'path')).content }
       r.register('search_text') do |args|
-        query = args[:query] || args['query']
-        Tools::SearchText.new(workspace).call(query).map { |m| "#{m.path}:#{m.line_number}: #{m.line}" }.join("\n")
+        Tools::SearchText.new(workspace).call(get.call(args, 'query'))
+                         .map { |m| "#{m.path}:#{m.line_number}: #{m.line}" }.join("\n")
+      end
+      r.register('propose_patch') do |args|
+        Tools::ProposePatch.new(workspace, run_dir: run_dir).call(get.call(args, 'diff')).to_s
       end
     end
   end
