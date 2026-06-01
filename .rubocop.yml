@@ -1,6 +1,7 @@
 AllCops:
   TargetRubyVersion: 3.0
   NewCops: enable
+  SuggestExtensions: false
 
 # Internal classes in a small CLI don't need API docs.
 Style/Documentation:

@@ -13,7 +13,7 @@ module Ragent
 
     def initialize(
       tool_definitions: [],
-      api_key: ENV['OPENAI_API_KEY'],
+      api_key: ENV.fetch('OPENAI_API_KEY', nil),
       base_url: ENV.fetch('OPENAI_BASE_URL', DEFAULT_BASE_URL),
       model: ENV.fetch('RAGENT_MODEL', DEFAULT_MODEL)
     )

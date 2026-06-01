@@ -2,7 +2,8 @@
 
 module Ragent
   class ToolRegistry
-    UnknownToolError = Class.new(StandardError)
+    class UnknownToolError < StandardError
+    end
 
     def initialize
       @tools = {}

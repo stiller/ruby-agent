@@ -7,7 +7,7 @@ module Ragent
 
   module Tools
     class ReadFile
-      MAX_SIZE = 100 * 1024  # 100 KB
+      MAX_SIZE = 100 * 1024 # 100 KB
 
       Result = Struct.new(:path, :content, :byte_size, :truncated, keyword_init: true)
 
