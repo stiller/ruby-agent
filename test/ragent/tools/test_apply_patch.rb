@@ -29,6 +29,17 @@ class TestApplyPatch < Minitest::Test
      end
   PATCH
 
+  WRONG_COUNT_PATCH = <<~PATCH
+    --- a/foo.rb
+    +++ b/foo.rb
+    @@ -1,3 +1,99 @@
+    +# comment
+     def foo
+    -  'old'
+    +  'new'
+     end
+  PATCH
+
   GIT_FORMAT_PATCH = <<~PATCH
     diff --git a/foo.rb b/foo.rb
     index abc1234..def5678 100644
@@ -77,6 +88,11 @@ class TestApplyPatch < Minitest::Test
     result = @tool.call(save_patch(GIT_FORMAT_PATCH))
     assert_match(/applied/i, result.to_s)
     assert_equal UPDATED_CONTENT, File.read(File.join(@repo, 'foo.rb'))
+  end
+
+  def test_fixes_miscounted_hunk_headers_and_applies
+    result = @tool.call(save_patch(WRONG_COUNT_PATCH))
+    assert_match(/applied/i, result.to_s)
   end
 
   def test_normalizes_bare_paths_and_applies

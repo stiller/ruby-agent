@@ -43,14 +43,14 @@ class TestPatchApprovalFlow < Minitest::Test
     assert_equal "old\n", File.read(File.join(@repo, 'lib/foo.rb'))
   end
 
-  def test_corrupt_patch_is_rejected_before_prompt
+  def test_inapplicable_patch_is_rejected_before_prompt
     setup_git_repo
-    corrupt = "--- a/lib/foo.rb\n+++ b/lib/foo.rb\n@@ -1 +1 @@\n-old\nnew_without_prefix\n"
+    bad_context = "--- a/lib/foo.rb\n+++ b/lib/foo.rb\n@@ -1 +1 @@\n-does_not_exist\n+new\n"
     approver = Ragent::PatchApprover.new(
       auto_approve: false, input: StringIO.new("y\n"), output: StringIO.new
     )
     registry = Ragent.send(:build_registry, @repo, run_dir: @run_dir, approver: approver)
-    tool_result = run_agent(registry, corrupt)
+    tool_result = run_agent(registry, bad_context)
     assert_match(/failed/i, tool_result)
   end
 

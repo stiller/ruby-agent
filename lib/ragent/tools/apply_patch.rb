@@ -19,6 +19,7 @@ module Ragent
 
       # Matches git-extended header lines that contain fabricated blob SHAs.
       GIT_HEADER = /\A(diff --git |index [0-9a-f])/
+      HUNK_HEADER = /\A@@ -(\d+)(?:,\d+)? \+(\d+)(?:,\d+)? @@/
 
       def initialize(repo_root)
         @repo_root = repo_root
@@ -47,10 +48,28 @@ module Ragent
       private
 
       def clean(content)
+        normalized = content.lines
+                            .grep_v(GIT_HEADER)
+                            .map { |l| normalize_path_line(l) }
+                            .join
+        fix_hunk_headers(normalized)
+      end
+
+      def fix_hunk_headers(content)
         content.lines
-               .grep_v(GIT_HEADER)
-               .map { |l| normalize_path_line(l) }
+               .slice_before { |l| l.match?(HUNK_HEADER) || l.start_with?('--- ', '+++ ') }
+               .flat_map { |chunk| rewrite_hunk_chunk(chunk) }
                .join
+      end
+
+      def rewrite_hunk_chunk(chunk)
+        m = HUNK_HEADER.match(chunk.first)
+        return chunk unless m
+
+        hunk = chunk.drop(1)
+        old_count = hunk.count { |l| l.start_with?(' ', '-') }
+        new_count = hunk.count { |l| l.start_with?(' ', '+') }
+        ["@@ -#{m[1]},#{old_count} +#{m[2]},#{new_count} @@\n", *hunk]
       end
 
       def normalize_path_line(line)
