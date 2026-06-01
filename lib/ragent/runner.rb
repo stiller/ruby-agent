@@ -27,7 +27,8 @@ module Ragent
     ),
     ToolDefinition.new(
       name: 'propose_patch',
-      description: 'Propose a code change as a unified diff. Saved for review but NOT applied.',
+      description: 'Propose a code change as a plain unified diff ' \
+                   '(--- / +++ / @@ format only, no git headers). Not applied.',
       parameters: {
         type: 'object',
         properties: { diff: { type: 'string', description: 'A unified diff in standard unified format.' } },
@@ -36,21 +37,23 @@ module Ragent
     )
   ].freeze
 
-  def self.run(prompt, workspace: Workspace::DEFAULT_PATH)
+  def self.run(prompt, workspace: Workspace::DEFAULT_PATH, auto_approve: false)
     transcript = Transcript.new
-    loop = build_loop(prompt, workspace, transcript)
+    approver = PatchApprover.new(auto_approve: auto_approve)
+    loop = build_loop(prompt, workspace, transcript, approver)
     loop.on_tool_call = method(:print_tool_progress)
     result = loop.run
     transcript.close
     print_result(result, transcript.run_dir)
   end
 
-  def self.build_loop(prompt, workspace, transcript)
+  def self.build_loop(prompt, workspace, transcript, approver)
+    registry = build_registry(workspace, run_dir: transcript.run_dir, approver: approver)
     AgentLoop.new(
       prompt: prompt,
       repo_root: workspace,
       model_client: build_client(prompt),
-      tool_registry: build_registry(workspace, run_dir: transcript.run_dir),
+      tool_registry: registry,
       transcript: transcript,
       system_prompt: build_system_prompt(workspace)
     )
@@ -93,8 +96,9 @@ module Ragent
   end
   private_class_method :build_system_prompt
 
-  def self.build_registry(workspace, run_dir:)
+  def self.build_registry(workspace, run_dir:, approver:)
     get = ->(args, k) { args[k.to_sym] || args[k.to_s] }
+    patch_handler = build_patch_handler(workspace, run_dir, approver)
     ToolRegistry.new.tap do |r|
       r.register('list_files') { |_args| Tools::ListFiles.new(workspace).call.join("\n") }
       r.register('read_file') { |args| Tools::ReadFile.new(workspace).call(get.call(args, 'path')).content }
@@ -102,10 +106,26 @@ module Ragent
         Tools::SearchText.new(workspace).call(get.call(args, 'query'))
                          .map { |m| "#{m.path}:#{m.line_number}: #{m.line}" }.join("\n")
       end
-      r.register('propose_patch') do |args|
-        Tools::ProposePatch.new(workspace, run_dir: run_dir).call(get.call(args, 'diff')).to_s
-      end
+      r.register('propose_patch') { |args| patch_handler.call(get.call(args, 'diff')) }
     end
   end
   private_class_method :build_registry
+
+  def self.build_patch_handler(workspace, run_dir, approver)
+    lambda do |diff|
+      proposal = Tools::ProposePatch.new(workspace, run_dir: run_dir).call(diff)
+      return proposal.to_s unless proposal.is_a?(Tools::ProposePatch::Result)
+
+      applier = Tools::ApplyPatch.new(workspace)
+      preflight = applier.check(proposal.patch_file)
+      return preflight.to_s if preflight
+
+      if approver.call(proposal.patch_file)
+        applier.call(proposal.patch_file).to_s
+      else
+        "Patch denied by user. Saved at: #{proposal.patch_file}"
+      end
+    end
+  end
+  private_class_method :build_patch_handler
 end

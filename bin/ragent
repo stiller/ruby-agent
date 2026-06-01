@@ -5,12 +5,15 @@ $LOAD_PATH.unshift(File.join(__dir__, '..', 'lib'))
 require 'ragent'
 require 'optparse'
 
-options = { workspace: Ragent::Workspace::DEFAULT_PATH }
+options = { workspace: Ragent::Workspace::DEFAULT_PATH, auto_approve: false }
 
 OptionParser.new do |opts|
   opts.banner = 'Usage: ragent [options] "your prompt here"'
   opts.on('--repo PATH', 'Path to the target repository (default: /workspace)') do |path|
     options[:workspace] = path
+  end
+  opts.on('--yes', 'DANGEROUS: auto-approve all proposed patches without prompting') do
+    options[:auto_approve] = true
   end
 end.parse!
 
@@ -28,4 +31,4 @@ rescue Ragent::WorkspaceError => e
   exit 1
 end
 
-Ragent.run(prompt, workspace: workspace)
+Ragent.run(prompt, workspace: workspace, auto_approve: options[:auto_approve])

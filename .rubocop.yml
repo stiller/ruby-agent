@@ -23,6 +23,10 @@ Metrics/CyclomaticComplexity:
 Metrics/ClassLength:
   Max: 150
 
+# Runner module consolidates all CLI wiring in one place.
+Metrics/ModuleLength:
+  Max: 120
+
 # AgentLoop initializer has several named keyword args; all are meaningful.
 Metrics/ParameterLists:
   Max: 7
