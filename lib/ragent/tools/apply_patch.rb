@@ -36,6 +36,17 @@ module Ragent
         Result.new(patch_file: patch_file, modified_files: modified_files(cleaned))
       end
 
+      def reverse(patch_file)
+        cleaned = clean(File.read(patch_file))
+        out, status = Open3.capture2e(
+          'git', '-C', @repo_root, 'apply', '--reverse', '-C3', '-',
+          stdin_data: cleaned
+        )
+        return Error.new(message: out.strip) unless status.success?
+
+        Result.new(patch_file: patch_file, modified_files: modified_files(cleaned))
+      end
+
       def check(patch_file)
         cleaned = clean(File.read(patch_file))
         out, status = Open3.capture2e(

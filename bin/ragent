@@ -20,6 +20,36 @@ OptionParser.new do |opts|
   end
 end.parse!
 
+if ARGV[0] == 'rollback'
+  run_dir = ARGV[1]
+  if run_dir.nil?
+    warn 'Usage: ragent [options] rollback RUN_DIR'
+    exit 1
+  end
+
+  run_dir = File.expand_path(run_dir)
+  unless Dir.exist?(run_dir)
+    warn "Error: '#{run_dir}' does not exist"
+    exit 1
+  end
+
+  workspace = File.expand_path('../../..', run_dir)
+  begin
+    Ragent::Workspace.validate!(workspace)
+  rescue Ragent::WorkspaceError => e
+    warn "Error: #{e.message}"
+    exit 1
+  end
+
+  begin
+    warn Ragent::Rollback.new(workspace).call(run_dir)
+  rescue Ragent::Rollback::CheckpointMissing => e
+    warn "Error: #{e.message}"
+    exit 1
+  end
+  exit 0
+end
+
 prompt = ARGV[0]
 
 if prompt.nil? || prompt.strip.empty?

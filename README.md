@@ -17,8 +17,9 @@ Pass a prompt as the first argument:
 bin/ragent --repo /path/to/repo "explain what this project does"
 ```
 
-Each run writes a JSONL transcript to `/tmp/ragent-runs/<timestamp>/transcript.jsonl`
-and prints the path at the end.
+Run artifacts (transcript, patches, checkpoint) are written to
+`<repo>/.ragent/runs/<timestamp>/` and kept after the session for inspection and rollback.
+Pass `--clean-runs` to delete them automatically when the session ends.
 
 The workspace defaults to the `RAGENT_WORKSPACE` environment variable (default: `/workspace`).
 
@@ -53,9 +54,7 @@ final answer to stdout. Example session:
 
 This is a plain-Ruby CLI that sends a prompt to an OpenAI-compatible model and
 lets it explore a target repository through three read-only tools: list_files,
-read_file, and search_text. Each run writes a JSONL transcript to /tmp/ragent-runs/.
-
-Run saved to: /tmp/ragent-runs/20260531-143012-abc123
+read_file, and search_text.
 ```
 
 Because tool-call progress goes to stderr and the final answer goes to stdout,
@@ -78,6 +77,22 @@ bin/ragent --repo /path/to/repo "what does this project do?"
 If `OPENAI_API_KEY` is not set, a `FakeModelClient` is used. It calls `list_files`
 once and returns a placeholder final answer, useful for testing the harness without
 a live API key.
+
+## Rollback
+
+When ragent applies a patch it saves a checkpoint under `.ragent/runs/<timestamp>/`.
+To undo the last applied patch:
+
+```bash
+bin/ragent rollback .ragent/runs/<timestamp>
+```
+
+Ragent reads the checkpoint, shows the patch that was applied, and asks for
+confirmation before reversing it with `git apply --reverse`.
+
+If automatic reversal fails (e.g. the file has since changed), ragent prints
+manual recovery instructions including the branch and repo state at the time the
+patch was applied.
 
 ## Running Tests
 
