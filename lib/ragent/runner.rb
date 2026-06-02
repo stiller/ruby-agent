@@ -121,7 +121,11 @@ module Ragent
       preflight = applier.check(proposal.patch_file)
       return preflight.to_s if preflight
 
+      checkpoint = Checkpoint.new(workspace, run_dir: run_dir)
+      warn 'Warning: workspace is not a git repository. Changes cannot be checkpointed.' unless checkpoint.git_repo?
+
       if approver.call(proposal.patch_file)
+        checkpoint.save(proposal.patch_file)
         applier.call(proposal.patch_file).to_s
       else
         "Patch denied by user. Saved at: #{proposal.patch_file}"
