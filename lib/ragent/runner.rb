@@ -1,3 +1,8 @@
+# The Ragent module provides a framework for automating tool usage within a project workspace.
+# It defines various tool operations such as listing files, reading file contents, searching text,
+# and proposing code changes. The module manages the execution of these tools in response to input
+# prompts, supporting interactions with both actual and mock API clients. It ensures operations can be
+# auto-approved and tracks the execution process via transcripts.
 #
 # frozen_string_literal: true
 
@@ -38,14 +43,17 @@ module Ragent
     )
   ].freeze
 
-  def self.run(prompt, workspace: Workspace::DEFAULT_PATH, auto_approve: false)
-    transcript = Transcript.new
+  def self.run(prompt, workspace: Workspace::DEFAULT_PATH, auto_approve: false, keep_runs: true)
+    Workspace.ensure_ragent_ignored!(workspace)
+    transcript = Transcript.new(runs_dir: File.join(workspace, '.ragent', 'runs'))
     approver = PatchApprover.new(auto_approve: auto_approve)
     loop = build_loop(prompt, workspace, transcript, approver)
     loop.on_tool_call = method(:print_tool_progress)
     result = loop.run
-    transcript.close
-    print_result(result, transcript.run_dir)
+    print_result(result)
+  ensure
+    transcript&.close
+    keep_runs ? warn("Run artifacts kept at: #{transcript&.run_dir}") : FileUtils.rm_rf(transcript&.run_dir)
   end
 
   def self.build_loop(prompt, workspace, transcript, approver)
@@ -73,10 +81,9 @@ module Ragent
   end
   private_class_method :format_arg
 
-  def self.print_result(content, run_dir)
+  def self.print_result(content)
     warn "\n=== Answer ==="
     puts content
-    warn "\nRun saved to: #{run_dir}"
   end
   private_class_method :print_result
 

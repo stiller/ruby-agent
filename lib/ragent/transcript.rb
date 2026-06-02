@@ -6,7 +6,7 @@ require 'securerandom'
 
 module Ragent
   class Transcript
-    RUNS_DIR = '/tmp/ragent-runs'
+    RUNS_DIR = '.ragent/runs'
     MAX_RESULT_LENGTH = 2000
 
     attr_reader :run_dir

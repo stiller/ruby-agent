@@ -25,4 +25,18 @@ class TestRagent < Minitest::Test
       assert_match '[fake] Received: inspect this', out
     end
   end
+
+  def test_run_keeps_run_directory_by_default
+    Dir.mktmpdir do |dir|
+      capture_io { Ragent.run('hello', workspace: dir) }
+      refute_empty Dir.glob(File.join(dir, '.ragent', 'runs', '*'))
+    end
+  end
+
+  def test_run_deletes_run_directory_when_clean_runs
+    Dir.mktmpdir do |dir|
+      capture_io { Ragent.run('hello', workspace: dir, keep_runs: false) }
+      assert_empty Dir.glob(File.join(dir, '.ragent', 'runs', '*'))
+    end
+  end
 end

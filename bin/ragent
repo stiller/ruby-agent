@@ -5,7 +5,7 @@ $LOAD_PATH.unshift(File.join(__dir__, '..', 'lib'))
 require 'ragent'
 require 'optparse'
 
-options = { workspace: Ragent::Workspace::DEFAULT_PATH, auto_approve: false }
+options = { workspace: Ragent::Workspace::DEFAULT_PATH, auto_approve: false, keep_runs: true }
 
 OptionParser.new do |opts|
   opts.banner = 'Usage: ragent [options] "your prompt here"'
@@ -14,6 +14,9 @@ OptionParser.new do |opts|
   end
   opts.on('--yes', 'DANGEROUS: auto-approve all proposed patches without prompting') do
     options[:auto_approve] = true
+  end
+  opts.on('--clean-runs', 'Delete run artifacts (.ragent/runs/) after session ends') do
+    options[:keep_runs] = false
   end
 end.parse!
 
@@ -31,4 +34,4 @@ rescue Ragent::WorkspaceError => e
   exit 1
 end
 
-Ragent.run(prompt, workspace: workspace, auto_approve: options[:auto_approve])
+Ragent.run(prompt, workspace: workspace, auto_approve: options[:auto_approve], keep_runs: options[:keep_runs])
