@@ -74,6 +74,7 @@ module Ragent
   end
 
   def self.build_loop(prompt, workspace, transcript, approver, command_approver, allow_commands: false)
+    instructions = load_instructions(workspace)
     registry = build_registry(
       workspace, run_dir: transcript.run_dir, approver: approver,
                  command_approver: command_approver, allow_commands: allow_commands
@@ -84,10 +85,17 @@ module Ragent
       model_client: build_client(prompt),
       tool_registry: registry,
       transcript: transcript,
-      system_prompt: build_system_prompt(workspace)
+      system_prompt: build_system_prompt(workspace, instructions: instructions)
     )
   end
   private_class_method :build_loop
+
+  def self.load_instructions(workspace)
+    entries = AgentInstructions.new(workspace).load
+    entries.map(&:first).each { |path| warn "Loaded repo instructions from #{path}" }
+    entries.map(&:last).join("\n\n")
+  end
+  private_class_method :load_instructions
 
   def self.print_tool_progress(tool, args)
     parts = args.map { |k, v| "#{k}: #{format_arg(v)}" }.join(', ')
@@ -119,8 +127,8 @@ module Ragent
   end
   private_class_method :build_client
 
-  def self.build_system_prompt(workspace)
-    Prompts::SystemPrompt.new(repo_root: workspace, tools: TOOL_DEFINITIONS.map(&:name))
+  def self.build_system_prompt(workspace, instructions: nil)
+    Prompts::SystemPrompt.new(repo_root: workspace, tools: TOOL_DEFINITIONS.map(&:name), instructions: instructions)
   end
   private_class_method :build_system_prompt
 

@@ -71,6 +71,32 @@ class TestSystemPrompt < Minitest::Test
     refute_includes custom, 'list_files'
   end
 
+  # --- repo-level instructions ---
+
+  def test_instructions_are_included_when_provided
+    prompt = Ragent::Prompts::SystemPrompt.new(repo_root: REPO, tools: TOOLS,
+                                               instructions: 'always write tests').to_s
+    assert_includes prompt, 'always write tests'
+  end
+
+  def test_instructions_section_header_is_present
+    prompt = Ragent::Prompts::SystemPrompt.new(repo_root: REPO, tools: TOOLS,
+                                               instructions: 'do something').to_s
+    assert_includes prompt, 'Repo-level instructions'
+  end
+
+  def test_nil_instructions_produces_no_instructions_section
+    prompt = Ragent::Prompts::SystemPrompt.new(repo_root: REPO, tools: TOOLS,
+                                               instructions: nil).to_s
+    refute_includes prompt, 'Repo-level instructions'
+  end
+
+  def test_blank_instructions_produces_no_instructions_section
+    prompt = Ragent::Prompts::SystemPrompt.new(repo_root: REPO, tools: TOOLS,
+                                               instructions: "   \n  ").to_s
+    refute_includes prompt, 'Repo-level instructions'
+  end
+
   # --- integration: AgentLoop sends system prompt as first message ---
 
   def test_agent_loop_sends_system_message_first
