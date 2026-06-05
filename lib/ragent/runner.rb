@@ -59,7 +59,11 @@ module Ragent
     Workspace.ensure_ragent_ignored!(workspace)
     transcript = Transcript.new(runs_dir: File.join(workspace, '.ragent', 'runs'))
     approver = PatchApprover.new(auto_approve: auto_approve)
-    command_approver = CommandApprover.new(auto_approve: auto_approve, allow_commands: allow_commands)
+    command_approver = CommandApprover.new(
+      auto_approve: auto_approve,
+      allow_commands: allow_commands,
+      allowed_commands: Config.new(workspace).allowed_commands
+    )
     loop = build_loop(prompt, workspace, transcript, approver, command_approver, allow_commands: allow_commands)
     loop.on_tool_call = method(:print_tool_progress)
     result = loop.run
