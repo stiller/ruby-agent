@@ -17,11 +17,88 @@ Pass a prompt as the first argument:
 bin/ragent --repo /path/to/repo "explain what this project does"
 ```
 
+### Options
+
+| Flag | Description |
+|---|---|
+| `--repo PATH` | Path to the target repository (default: `/workspace`) |
+| `--yes` | Auto-approve all proposed patches without prompting |
+| `--allow-commands` | Allow the agent to propose and run shell commands |
+| `--clean-runs` | Delete run artifacts after the session ends |
+
 Run artifacts (transcript, patches, checkpoint) are written to
 `<repo>/.ragent/runs/<timestamp>/` and kept after the session for inspection and rollback.
 Pass `--clean-runs` to delete them automatically when the session ends.
 
 The workspace defaults to the `RAGENT_WORKSPACE` environment variable (default: `/workspace`).
+
+## Proposing patches
+
+The agent proposes code changes as unified diffs. By default it prompts you to review
+and approve each patch before applying it:
+
+```
+Apply this patch? [y/N]
+```
+
+Pass `--yes` to auto-approve all patches:
+
+```bash
+bin/ragent --repo /path/to/repo --yes "fix the typo in README"
+```
+
+Before applying, ragent saves a checkpoint so the change can be rolled back.
+
+## Shell commands
+
+By default the agent can read files but cannot run shell commands. Pass
+`--allow-commands` to enable command proposals:
+
+```bash
+bin/ragent --repo /path/to/repo --allow-commands "run the test suite and fix any failures"
+```
+
+Each proposed command shows the command and reason, then prompts for approval:
+
+```
+$ bundle exec rake test
+Reason: run the test suite to check for failures
+Run this command? [y/N]
+```
+
+Pass both `--yes` and `--allow-commands` to auto-approve commands as well as patches:
+
+```bash
+bin/ragent --repo /path/to/repo --yes --allow-commands "..."
+```
+
+### Dangerous command rejection
+
+Ragent always rejects commands that touch destructive targets regardless of any other
+settings: recursive root deletes, `dd`, `mkfs`, `shutdown`, `reboot`, curl/wget piped
+to a shell, `/etc`, and `~/.ssh`.
+
+## Configuration
+
+Ragent reads `.ragent.yml` from the repo root if it exists.
+
+### Allowed commands
+
+List command prefixes that may run without an interactive prompt. Useful for trusted
+project-specific commands (tests, linters, build steps) so the agent can run them
+without interrupting the session:
+
+```yaml
+allowed_commands:
+  - bundle exec rake test
+  - bundle exec rubocop
+  - npm test
+  - pytest
+```
+
+A command matches if it equals a listed prefix exactly or starts with the prefix
+followed by a space (so `bundle exec rake test --verbose` matches `bundle exec rake test`).
+Dangerous commands are always rejected even if listed.
 
 ## Model configuration
 
@@ -53,8 +130,8 @@ final answer to stdout. Example session:
 === Answer ===
 
 This is a plain-Ruby CLI that sends a prompt to an OpenAI-compatible model and
-lets it explore a target repository through three read-only tools: list_files,
-read_file, and search_text.
+lets it explore a target repository through a set of tools: list_files,
+read_file, search_text, propose_patch, and propose_command.
 ```
 
 Because tool-call progress goes to stderr and the final answer goes to stdout,
