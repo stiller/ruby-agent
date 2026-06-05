@@ -125,6 +125,18 @@ class TestSearchText < Minitest::Test
     assert(search('needle').none? { |m| m.path.start_with?('.bundle') })
   end
 
+  # --- ignored_paths ---
+
+  def test_ignored_paths_skips_named_directory
+    write('dist/bundle.js', "needle\n")
+    assert(search('needle', ignored_paths: ['dist']).none? { |m| m.path.start_with?('dist') })
+  end
+
+  def test_ignored_paths_empty_includes_directory
+    write('dist/bundle.js', "needle\n")
+    assert(search('needle', ignored_paths: []).any? { |m| m.path.start_with?('dist') })
+  end
+
   # --- symlink safety ---
 
   def test_skips_symlinks_pointing_outside_repo
@@ -144,8 +156,8 @@ class TestSearchText < Minitest::Test
     File.write(full, content)
   end
 
-  def search(query)
-    searcher.call(query)
+  def search(query, ignored_paths: [])
+    Ragent::Tools::SearchText.new(@dir, ignored_paths: ignored_paths).call(query)
   end
 
   def searcher(limit: Ragent::Tools::SearchText::DEFAULT_LIMIT)

@@ -67,10 +67,15 @@ rescue Ragent::WorkspaceError => e
   exit 1
 end
 
-Ragent.run(
-  prompt,
-  workspace: workspace,
-  auto_approve: options[:auto_approve],
-  keep_runs: options[:keep_runs],
-  allow_commands: options[:allow_commands]
-)
+begin
+  Ragent.run(
+    prompt,
+    workspace: workspace,
+    auto_approve: options[:auto_approve],
+    keep_runs: options[:keep_runs],
+    allow_commands: options[:allow_commands]
+  )
+rescue Ragent::ConfigError => e
+  warn "Error in #{Ragent::Config::FILENAME}: #{e.message}"
+  exit 1
+end

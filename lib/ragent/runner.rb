@@ -58,26 +58,27 @@ module Ragent
   def self.run(prompt, workspace: Workspace::DEFAULT_PATH, auto_approve: false, keep_runs: true, allow_commands: false)
     Workspace.ensure_ragent_ignored!(workspace)
     transcript = Transcript.new(runs_dir: File.join(workspace, '.ragent', 'runs'))
-    approver = PatchApprover.new(auto_approve: auto_approve)
+    config = Config.new(workspace)
+    approver = PatchApprover.new(auto_approve: auto_approve || config.approval_mode == 'auto')
     command_approver = CommandApprover.new(
-      auto_approve: auto_approve,
+      auto_approve: auto_approve || config.approval_mode == 'auto',
       allow_commands: allow_commands,
-      allowed_commands: Config.new(workspace).allowed_commands
+      allowed_commands: config.allowed_commands
     )
-    loop = build_loop(prompt, workspace, transcript, approver, command_approver, allow_commands: allow_commands)
+    loop = build_loop(prompt, workspace, transcript, approver, command_approver,
+                      allow_commands: allow_commands, config: config)
     loop.on_tool_call = method(:print_tool_progress)
-    result = loop.run
-    print_result(result)
+    print_result(loop.run)
   ensure
     transcript&.close
     keep_runs ? warn("Run artifacts kept at: #{transcript&.run_dir}") : FileUtils.rm_rf(transcript&.run_dir)
   end
 
-  def self.build_loop(prompt, workspace, transcript, approver, command_approver, allow_commands: false)
+  def self.build_loop(prompt, workspace, transcript, approver, command_approver, config:, allow_commands: false)
     instructions = load_instructions(workspace)
     registry = build_registry(
       workspace, run_dir: transcript.run_dir, approver: approver,
-                 command_approver: command_approver, allow_commands: allow_commands
+                 command_approver: command_approver, allow_commands: allow_commands, config: config
     )
     AgentLoop.new(
       prompt: prompt,
@@ -132,16 +133,16 @@ module Ragent
   end
   private_class_method :build_system_prompt
 
-  def self.build_registry(workspace, run_dir:, approver:, command_approver:, allow_commands: false)
+  def self.build_registry(workspace, run_dir:, approver:, command_approver:, config:, allow_commands: false)
     get = ->(args, k) { args[k.to_sym] || args[k.to_s] }
+    t = build_tools(workspace, config)
     patch_handler = build_patch_handler(workspace, run_dir, approver)
     command_handler = build_command_handler(workspace, command_approver, allow_commands: allow_commands)
     ToolRegistry.new.tap do |r|
-      r.register('list_files') { |_args| Tools::ListFiles.new(workspace).call.join("\n") }
-      r.register('read_file') { |args| Tools::ReadFile.new(workspace).call(get.call(args, 'path')).content }
+      r.register('list_files') { |_args| t[:list].call.join("\n") }
+      r.register('read_file') { |args| t[:read].call(get.call(args, 'path')).content }
       r.register('search_text') do |args|
-        Tools::SearchText.new(workspace).call(get.call(args, 'query'))
-                         .map { |m| "#{m.path}:#{m.line_number}: #{m.line}" }.join("\n")
+        t[:search].call(get.call(args, 'query')).map { |m| "#{m.path}:#{m.line_number}: #{m.line}" }.join("\n")
       end
       r.register('propose_patch') { |args| patch_handler.call(get.call(args, 'diff')) }
       r.register('propose_command') do |args|
@@ -150,6 +151,16 @@ module Ragent
     end
   end
   private_class_method :build_registry
+
+  def self.build_tools(workspace, config)
+    {
+      list: Tools::ListFiles.new(workspace, ignored_paths: config.ignored_paths),
+      read: Tools::ReadFile.new(workspace, max_size: config.max_file_size || Tools::ReadFile::MAX_SIZE),
+      search: Tools::SearchText.new(workspace, ignored_paths: config.ignored_paths,
+                                               limit: config.max_search_results || Tools::SearchText::DEFAULT_LIMIT)
+    }
+  end
+  private_class_method :build_tools
 
   def self.build_command_handler(workspace, command_approver, allow_commands: false)
     lambda do |command, reason|

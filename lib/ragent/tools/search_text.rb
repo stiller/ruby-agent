@@ -12,9 +12,10 @@ module Ragent
 
       Match = Struct.new(:path, :line_number, :line, keyword_init: true)
 
-      def initialize(repo_root, limit: DEFAULT_LIMIT)
+      def initialize(repo_root, limit: DEFAULT_LIMIT, ignored_paths: [])
         @repo_root = Pathname.new(File.realpath(repo_root))
         @limit = limit
+        @ignored_paths = ignored_paths
       end
 
       def call(query)
@@ -40,7 +41,7 @@ module Ragent
           pn = Pathname.new(path)
 
           if pn.directory?
-            Find.prune if ListFiles::IGNORED_DIRS.include?(pn.basename.to_s)
+            Find.prune if ignored_dir?(pn.basename.to_s)
             next
           end
 
@@ -68,6 +69,10 @@ module Ragent
         File.open(path, 'rb') { |f| f.read(BINARY_CHECK_BYTES)&.include?("\x00") }
       rescue Errno::EACCES, Errno::ENOENT
         true
+      end
+
+      def ignored_dir?(name)
+        ListFiles::IGNORED_DIRS.include?(name) || @ignored_paths.include?(name)
       end
 
       def safe_symlink?(pathname)

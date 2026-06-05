@@ -9,9 +9,10 @@ module Ragent
       IGNORED_DIRS = %w[.git node_modules vendor tmp log .bundle].freeze
       DEFAULT_LIMIT = 200
 
-      def initialize(repo_root, limit: DEFAULT_LIMIT)
+      def initialize(repo_root, limit: DEFAULT_LIMIT, ignored_paths: [])
         @repo_root = Pathname.new(File.realpath(repo_root))
         @limit = limit
+        @ignored_paths = ignored_paths
       end
 
       def call
@@ -22,7 +23,7 @@ module Ragent
             pn = Pathname.new(path)
 
             if pn.directory?
-              Find.prune if IGNORED_DIRS.include?(pn.basename.to_s)
+              Find.prune if ignored_dir?(pn.basename.to_s)
               next
             end
 
@@ -39,6 +40,10 @@ module Ragent
       end
 
       private
+
+      def ignored_dir?(name)
+        IGNORED_DIRS.include?(name) || @ignored_paths.include?(name)
+      end
 
       def safe_symlink?(pathname)
         real = Pathname.new(File.realpath(pathname.to_s))

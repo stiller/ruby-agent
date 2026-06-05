@@ -80,25 +80,51 @@ to a shell, `/etc`, and `~/.ssh`.
 
 ## Configuration
 
-Ragent reads `.ragent.yml` from the repo root if it exists.
-
-### Allowed commands
-
-List command prefixes that may run without an interactive prompt. Useful for trusted
-project-specific commands (tests, linters, build steps) so the agent can run them
-without interrupting the session:
+Ragent reads `.ragent.yml` from the repo root if it exists. All keys are optional.
+An invalid value produces a clear error at startup.
 
 ```yaml
+# Auto-approve patches without prompting ('ask' is the default).
+approval_mode: auto
+
+# Command prefixes that run without a prompt when --allow-commands is set.
 allowed_commands:
   - bundle exec rake test
   - bundle exec rubocop
   - npm test
   - pytest
+
+# Directory names to exclude from file listing and search.
+ignored_paths:
+  - dist
+  - coverage
+  - .cache
+
+# Maximum file size ragent will read, in bytes (default: 102400).
+max_file_size: 51200
+
+# Maximum number of search matches returned (default: 50).
+max_search_results: 100
 ```
 
+### approval_mode
+
+| Value | Behaviour |
+|---|---|
+| `ask` | Prompt before applying each patch (default) |
+| `auto` | Auto-approve patches — equivalent to passing `--yes` |
+
+### allowed_commands
+
 A command matches if it equals a listed prefix exactly or starts with the prefix
-followed by a space (so `bundle exec rake test --verbose` matches `bundle exec rake test`).
+followed by a space (`bundle exec rake test --verbose` matches `bundle exec rake test`).
+`--allow-commands` must still be passed for the agent to propose commands at all.
 Dangerous commands are always rejected even if listed.
+
+### ignored_paths
+
+Directory basenames to skip during `list_files` and `search_text`. Added on top of
+the built-in ignore list (`.git`, `node_modules`, `vendor`, `tmp`, `log`, `.bundle`).
 
 ## Model configuration
 

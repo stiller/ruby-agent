@@ -68,6 +68,24 @@ class TestListFiles < Minitest::Test
     assert_includes list, 'vendor.rb'
   end
 
+  # --- ignored_paths ---
+
+  def test_ignored_paths_excludes_named_directory
+    touch_inside('dist', 'bundle.js')
+    assert(list(ignored_paths: ['dist']).none? { |f| f.start_with?('dist') })
+  end
+
+  def test_ignored_paths_does_not_affect_other_directories
+    touch_inside('dist', 'bundle.js')
+    FileUtils.touch(File.join(@dir, 'app.rb'))
+    assert_includes list(ignored_paths: ['dist']), 'app.rb'
+  end
+
+  def test_ignored_paths_empty_has_no_effect
+    touch_inside('dist', 'bundle.js')
+    assert(list(ignored_paths: []).any? { |f| f.start_with?('dist') })
+  end
+
   # --- limit ---
 
   def test_respects_default_limit
@@ -115,8 +133,8 @@ class TestListFiles < Minitest::Test
 
   private
 
-  def list(limit: Ragent::Tools::ListFiles::DEFAULT_LIMIT)
-    Ragent::Tools::ListFiles.new(@dir, limit: limit).call
+  def list(limit: Ragent::Tools::ListFiles::DEFAULT_LIMIT, ignored_paths: [])
+    Ragent::Tools::ListFiles.new(@dir, limit: limit, ignored_paths: ignored_paths).call
   end
 
   def touch_inside(subdir, filename)
