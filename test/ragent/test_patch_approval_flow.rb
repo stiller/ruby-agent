@@ -49,7 +49,8 @@ class TestPatchApprovalFlow < Minitest::Test
     approver = Ragent::PatchApprover.new(
       auto_approve: false, input: StringIO.new("y\n"), output: StringIO.new
     )
-    registry = Ragent.send(:build_registry, @repo, run_dir: @run_dir, approver: approver)
+    registry = Ragent.send(:build_registry, @repo, run_dir: @run_dir, approver: approver,
+                                                   command_approver: Ragent::CommandApprover.new)
     tool_result = run_agent(registry, bad_context)
     assert_match(/failed/i, tool_result)
   end
@@ -60,7 +61,8 @@ class TestPatchApprovalFlow < Minitest::Test
     approver = Ragent::PatchApprover.new(
       auto_approve: auto_approve, input: StringIO.new(input), output: StringIO.new
     )
-    registry = Ragent.send(:build_registry, @repo, run_dir: @run_dir, approver: approver)
+    registry = Ragent.send(:build_registry, @repo, run_dir: @run_dir, approver: approver,
+                                                   command_approver: Ragent::CommandApprover.new)
     run_agent(registry, diff)
   end
 

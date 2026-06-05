@@ -18,6 +18,7 @@ module Ragent
           - Work in small, verifiable steps. Inspect before summarizing.
           - Only use the tools provided by this harness: #{@tools.join(', ')}.
           - When finished, provide a concise summary of what you did and what you found.
+          - Use propose_command to run shell commands. Each command requires user approval before execution.
         PROMPT
       end
     end

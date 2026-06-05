@@ -40,14 +40,27 @@ module Ragent
         properties: { diff: { type: 'string', description: 'A unified diff in standard unified format.' } },
         required: ['diff']
       }
+    ),
+    ToolDefinition.new(
+      name: 'propose_command',
+      description: 'Propose a shell command to run. Requires user approval before execution.',
+      parameters: {
+        type: 'object',
+        properties: {
+          command: { type: 'string', description: 'The shell command to execute.' },
+          reason: { type: 'string', description: 'Why this command is needed.' }
+        },
+        required: %w[command reason]
+      }
     )
   ].freeze
 
-  def self.run(prompt, workspace: Workspace::DEFAULT_PATH, auto_approve: false, keep_runs: true)
+  def self.run(prompt, workspace: Workspace::DEFAULT_PATH, auto_approve: false, keep_runs: true, allow_commands: false)
     Workspace.ensure_ragent_ignored!(workspace)
     transcript = Transcript.new(runs_dir: File.join(workspace, '.ragent', 'runs'))
     approver = PatchApprover.new(auto_approve: auto_approve)
-    loop = build_loop(prompt, workspace, transcript, approver)
+    command_approver = CommandApprover.new(auto_approve: auto_approve, allow_commands: allow_commands)
+    loop = build_loop(prompt, workspace, transcript, approver, command_approver, allow_commands: allow_commands)
     loop.on_tool_call = method(:print_tool_progress)
     result = loop.run
     print_result(result)
@@ -56,8 +69,11 @@ module Ragent
     keep_runs ? warn("Run artifacts kept at: #{transcript&.run_dir}") : FileUtils.rm_rf(transcript&.run_dir)
   end
 
-  def self.build_loop(prompt, workspace, transcript, approver)
-    registry = build_registry(workspace, run_dir: transcript.run_dir, approver: approver)
+  def self.build_loop(prompt, workspace, transcript, approver, command_approver, allow_commands: false)
+    registry = build_registry(
+      workspace, run_dir: transcript.run_dir, approver: approver,
+                 command_approver: command_approver, allow_commands: allow_commands
+    )
     AgentLoop.new(
       prompt: prompt,
       repo_root: workspace,
@@ -104,9 +120,10 @@ module Ragent
   end
   private_class_method :build_system_prompt
 
-  def self.build_registry(workspace, run_dir:, approver:)
+  def self.build_registry(workspace, run_dir:, approver:, command_approver:, allow_commands: false)
     get = ->(args, k) { args[k.to_sym] || args[k.to_s] }
     patch_handler = build_patch_handler(workspace, run_dir, approver)
+    command_handler = build_command_handler(workspace, command_approver, allow_commands: allow_commands)
     ToolRegistry.new.tap do |r|
       r.register('list_files') { |_args| Tools::ListFiles.new(workspace).call.join("\n") }
       r.register('read_file') { |args| Tools::ReadFile.new(workspace).call(get.call(args, 'path')).content }
@@ -115,9 +132,31 @@ module Ragent
                          .map { |m| "#{m.path}:#{m.line_number}: #{m.line}" }.join("\n")
       end
       r.register('propose_patch') { |args| patch_handler.call(get.call(args, 'diff')) }
+      r.register('propose_command') do |args|
+        command_handler.call(get.call(args, 'command'), get.call(args, 'reason'))
+      end
     end
   end
   private_class_method :build_registry
+
+  def self.build_command_handler(workspace, command_approver, allow_commands: false)
+    lambda do |command, reason|
+      unless allow_commands
+        warn 'Note: shell commands are not enabled. Re-run with --allow-commands to enable them.'
+        return 'Shell commands are not enabled.'
+      end
+
+      proposal = Tools::ProposeCommand.new.call(command, reason)
+      return proposal.to_s unless proposal.is_a?(Tools::ProposeCommand::Result)
+
+      if command_approver.call(proposal)
+        Tools::RunCommand.new(workspace).call(command).to_s
+      else
+        'Command denied by user.'
+      end
+    end
+  end
+  private_class_method :build_command_handler
 
   def self.build_patch_handler(workspace, run_dir, approver)
     lambda do |diff|
