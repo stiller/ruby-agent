@@ -6,7 +6,7 @@ require 'pathname'
 module Ragent
   module Tools
     class ListFiles
-      IGNORED_DIRS = %w[.git node_modules vendor tmp log .bundle].freeze
+      IGNORED_DIRS = %w[.git node_modules vendor tmp log .bundle .ragent].freeze
       DEFAULT_LIMIT = 200
 
       def initialize(repo_root, limit: DEFAULT_LIMIT, ignored_paths: [])

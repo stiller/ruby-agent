@@ -52,6 +52,36 @@ module Ragent
         },
         required: %w[command reason]
       }
+    ),
+    ToolDefinition.new(
+      name: 'replace_in_file',
+      description: 'Replace an exact string that appears exactly once in a file. ' \
+                   'Fails if old_text is not found or appears more than once. ' \
+                   'Use replace_all_in_file when old_text appears multiple times.',
+      parameters: {
+        type: 'object',
+        properties: {
+          path: { type: 'string', description: 'Relative path from the repo root.' },
+          old_text: { type: 'string', description: 'The exact text to find and replace. Must appear exactly once.' },
+          new_text: { type: 'string', description: 'The replacement text.' }
+        },
+        required: %w[path old_text new_text]
+      }
+    ),
+    ToolDefinition.new(
+      name: 'replace_all_in_file',
+      description: 'Replace every occurrence of a string in a file. ' \
+                   'Fails only if old_text is not found at all. ' \
+                   'Use this when old_text appears multiple times and all instances should be changed.',
+      parameters: {
+        type: 'object',
+        properties: {
+          path: { type: 'string', description: 'Relative path from the repo root.' },
+          old_text: { type: 'string', description: 'The exact text to find and replace everywhere.' },
+          new_text: { type: 'string', description: 'The replacement text.' }
+        },
+        required: %w[path old_text new_text]
+      }
     )
   ].freeze
 
@@ -137,6 +167,8 @@ module Ragent
     get = ->(args, k) { args[k.to_sym] || args[k.to_s] }
     t = build_tools(workspace, config)
     patch_handler = build_patch_handler(workspace, run_dir, approver)
+    replace_handler = build_replace_handler(workspace, run_dir, approver)
+    replace_all_handler = build_replace_all_handler(workspace, run_dir, approver)
     command_handler = build_command_handler(workspace, command_approver, allow_commands: allow_commands)
     ToolRegistry.new.tap do |r|
       r.register('list_files') { |_args| t[:list].call.join("\n") }
@@ -145,6 +177,12 @@ module Ragent
         t[:search].call(get.call(args, 'query')).map { |m| "#{m.path}:#{m.line_number}: #{m.line}" }.join("\n")
       end
       r.register('propose_patch') { |args| patch_handler.call(get.call(args, 'diff')) }
+      r.register('replace_in_file') do |args|
+        replace_handler.call(get.call(args, 'path'), get.call(args, 'old_text'), get.call(args, 'new_text'))
+      end
+      r.register('replace_all_in_file') do |args|
+        replace_all_handler.call(get.call(args, 'path'), get.call(args, 'old_text'), get.call(args, 'new_text'))
+      end
       r.register('propose_command') do |args|
         command_handler.call(get.call(args, 'command'), get.call(args, 'reason'))
       end
@@ -181,25 +219,50 @@ module Ragent
   end
   private_class_method :build_command_handler
 
+  def self.apply_approved_patch(workspace, run_dir, approver, patch_file)
+    applier = Tools::ApplyPatch.new(workspace)
+    preflight = applier.check(patch_file)
+    return preflight.to_s if preflight
+
+    checkpoint = Checkpoint.new(workspace, run_dir: run_dir)
+    warn 'Warning: workspace is not a git repository. Changes cannot be checkpointed.' unless checkpoint.git_repo?
+
+    if approver.call(patch_file)
+      checkpoint.save(patch_file)
+      applier.call(patch_file).to_s
+    else
+      "Patch denied by user. Saved at: #{patch_file}"
+    end
+  end
+  private_class_method :apply_approved_patch
+
   def self.build_patch_handler(workspace, run_dir, approver)
     lambda do |diff|
       proposal = Tools::ProposePatch.new(workspace, run_dir: run_dir).call(diff)
       return proposal.to_s unless proposal.is_a?(Tools::ProposePatch::Result)
 
-      applier = Tools::ApplyPatch.new(workspace)
-      preflight = applier.check(proposal.patch_file)
-      return preflight.to_s if preflight
-
-      checkpoint = Checkpoint.new(workspace, run_dir: run_dir)
-      warn 'Warning: workspace is not a git repository. Changes cannot be checkpointed.' unless checkpoint.git_repo?
-
-      if approver.call(proposal.patch_file)
-        checkpoint.save(proposal.patch_file)
-        applier.call(proposal.patch_file).to_s
-      else
-        "Patch denied by user. Saved at: #{proposal.patch_file}"
-      end
+      apply_approved_patch(workspace, run_dir, approver, proposal.patch_file)
     end
   end
   private_class_method :build_patch_handler
+
+  def self.build_replace_handler(workspace, run_dir, approver)
+    lambda do |path, old_text, new_text|
+      result = Tools::ReplaceInFile.new(workspace, run_dir: run_dir).call(path, old_text, new_text)
+      return result.to_s unless result.is_a?(Tools::ReplaceInFile::Result)
+
+      apply_approved_patch(workspace, run_dir, approver, result.patch_file)
+    end
+  end
+  private_class_method :build_replace_handler
+
+  def self.build_replace_all_handler(workspace, run_dir, approver)
+    lambda do |path, old_text, new_text|
+      result = Tools::ReplaceAllInFile.new(workspace, run_dir: run_dir).call(path, old_text, new_text)
+      return result.to_s unless result.is_a?(Tools::ReplaceAllInFile::Result)
+
+      apply_approved_patch(workspace, run_dir, approver, result.patch_file)
+    end
+  end
+  private_class_method :build_replace_all_handler
 end

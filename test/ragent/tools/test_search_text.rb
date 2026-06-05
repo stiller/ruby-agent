@@ -125,6 +125,11 @@ class TestSearchText < Minitest::Test
     assert(search('needle').none? { |m| m.path.start_with?('.bundle') })
   end
 
+  def test_ignores_ragent
+    write('.ragent/runs/transcript.jsonl', "needle\n")
+    assert(search('needle').none? { |m| m.path.start_with?('.ragent') })
+  end
+
   # --- ignored_paths ---
 
   def test_ignored_paths_skips_named_directory

@@ -63,6 +63,11 @@ class TestListFiles < Minitest::Test
     assert(list.none? { |f| f.start_with?('.bundle') })
   end
 
+  def test_ignores_ragent
+    touch_inside('.ragent/runs', 'transcript.jsonl')
+    assert(list.none? { |f| f.start_with?('.ragent') })
+  end
+
   def test_does_not_ignore_files_that_share_a_prefix_with_ignored_dirs
     FileUtils.touch(File.join(@dir, 'vendor.rb'))
     assert_includes list, 'vendor.rb'
