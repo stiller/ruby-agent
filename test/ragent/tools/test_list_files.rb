@@ -108,6 +108,41 @@ class TestListFiles < Minitest::Test
     assert_equal 3, list.size
   end
 
+  # --- path ---
+
+  def test_path_lists_subdirectory
+    touch_inside('subdir', 'nested.rb')
+    assert_includes list(path: 'subdir'), 'subdir/nested.rb'
+  end
+
+  def test_path_excludes_files_outside_subdirectory
+    FileUtils.touch(File.join(@dir, 'root.rb'))
+    touch_inside('subdir', 'nested.rb')
+    result = list(path: 'subdir')
+    assert(result.none? { |f| f == 'root.rb' })
+  end
+
+  def test_path_with_max_depth_lists_direct_children
+    touch_inside('subdir/inner', 'deep.rb')
+    FileUtils.touch(File.join(@dir, 'subdir', 'shallow.rb'))
+    result = list(path: 'subdir', max_depth: 1)
+    assert_includes result, 'subdir/shallow.rb'
+    assert_includes result, 'subdir/inner/'
+    assert(result.none? { |f| f == 'subdir/inner/deep.rb' })
+  end
+
+  def test_path_returns_error_for_nonexistent_directory
+    result = list(path: 'nonexistent')
+    assert_equal 1, result.size
+    assert_match 'nonexistent', result.first
+  end
+
+  def test_path_rejects_traversal
+    result = list(path: '../outside')
+    assert_equal 1, result.size
+    assert_match 'not a valid', result.first
+  end
+
   # --- max_depth ---
 
   def test_max_depth_1_includes_toplevel_files
@@ -179,8 +214,9 @@ class TestListFiles < Minitest::Test
 
   private
 
-  def list(limit: Ragent::Tools::ListFiles::DEFAULT_LIMIT, ignored_paths: [], max_depth: nil)
-    Ragent::Tools::ListFiles.new(@dir, limit: limit, ignored_paths: ignored_paths).call(max_depth: max_depth)
+  def list(limit: Ragent::Tools::ListFiles::DEFAULT_LIMIT, ignored_paths: [], path: nil, max_depth: nil)
+    Ragent::Tools::ListFiles.new(@dir, limit: limit, ignored_paths: ignored_paths)
+                            .call(path: path, max_depth: max_depth)
   end
 
   def touch_inside(subdir, filename)

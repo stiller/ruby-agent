@@ -11,14 +11,19 @@ module Ragent
     ToolDefinition.new(
       name: 'list_files',
       description: 'List files and directories in the repository. ' \
-                   'Use max_depth: 1 to see only top-level entries (both files and directories). ' \
+                   'Use path to start from a subdirectory. ' \
+                   'Use max_depth: 1 to see only direct children (files and directories). ' \
                    'Without max_depth, lists all files recursively (up to 200).',
       parameters: {
         type: 'object',
         properties: {
+          path: {
+            type: 'string',
+            description: 'Subdirectory to list, relative to repo root. Omit to list from root.'
+          },
           max_depth: {
             type: 'integer',
-            description: 'Max depth to traverse. 1 = direct children of root only. Omit for full recursive listing.'
+            description: 'Max depth to traverse. 1 = direct children only. Omit for full recursive listing.'
           }
         },
         required: []
@@ -185,7 +190,10 @@ module Ragent
     command_handler = build_command_handler(workspace, command_approver, allow_commands: allow_commands)
     ToolRegistry.new.tap do |r|
       r.register('list_files') do |args|
-        t[:list].call(max_depth: get.call(args, 'max_depth')&.to_i).join("\n")
+        t[:list].call(
+          path: get.call(args, 'path'),
+          max_depth: get.call(args, 'max_depth')&.to_i
+        ).join("\n")
       end
       r.register('read_file') { |args| t[:read].call(get.call(args, 'path')).content }
       r.register('search_text') do |args|

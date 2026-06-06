@@ -15,15 +15,17 @@ module Ragent
         @ignored_paths = ignored_paths
       end
 
-      def call(max_depth: nil)
-        results = []
+      def call(path: nil, max_depth: nil)
+        start_dir = resolve_start_dir(path)
+        return ["Error: '#{path}' is not a valid directory path."] unless start_dir
 
+        results = []
         catch(:done) do
-          Find.find(@repo_root.to_s) do |path|
-            pn = Pathname.new(path)
+          Find.find(start_dir.to_s) do |raw_path|
+            pn = Pathname.new(raw_path)
 
             if pn.directory?
-              handle_directory(pn, results, max_depth)
+              handle_directory(pn, results, max_depth, start_dir)
               next
             end
 
@@ -40,21 +42,33 @@ module Ragent
 
       private
 
-      def handle_directory(pathname, results, max_depth)
+      def resolve_start_dir(path)
+        return @repo_root if path.nil? || path.to_s.strip.empty?
+
+        candidate = @repo_root.join(path)
+        real = Pathname.new(File.realpath(candidate.to_s))
+        return nil unless real.to_s.start_with?(@repo_root.to_s)
+        return nil unless real.directory?
+
+        real
+      rescue Errno::ENOENT
+        nil
+      end
+
+      def handle_directory(pathname, results, max_depth, start_dir)
         if ignored_dir?(pathname.basename.to_s)
           Find.prune
         elsif max_depth
-          handle_bounded_dir(pathname, results, max_depth)
+          handle_bounded_dir(pathname, results, max_depth, start_dir)
         end
       end
 
-      def handle_bounded_dir(pathname, results, max_depth)
-        rel = pathname.relative_path_from(@repo_root)
-        unless rel.to_s == '.'
-          results << "#{rel}/"
+      def handle_bounded_dir(pathname, results, max_depth, start_dir)
+        unless pathname == start_dir
+          results << "#{pathname.relative_path_from(@repo_root)}/"
           throw :done if results.size >= @limit
         end
-        depth = rel.to_s == '.' ? 0 : rel.each_filename.count
+        depth = pathname == start_dir ? 0 : pathname.relative_path_from(start_dir).each_filename.count
         Find.prune if depth >= max_depth
       end
 
