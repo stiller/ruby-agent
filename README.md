@@ -223,9 +223,8 @@ docker compose build
 docker compose run --rm ragent "hello"
 ```
 
-By default `/workspace` is mounted **read-only**. The agent can explore and propose
-patches, but cannot apply them. Run artifacts go to `/tmp/ragent-runs` inside the
-container and are lost when it exits.
+`/workspace` is mounted **read-write** by default so the agent can apply patches
+and write run artifacts to `<workspace>/.ragent/runs/`.
 
 ### Point at a target repository
 
@@ -242,18 +241,17 @@ workspace root the CLI uses. Set it permanently in a `.env` file:
 WORKSPACE_PATH=/path/to/your/repo
 ```
 
-### Applying patches (read-write mode)
+### Read-only mode
 
-To let the agent apply patches and write run artifacts to the workspace, use the
-read-write override:
+To prevent the agent from writing to the workspace at all, use the read-only override:
 
 ```bash
-docker compose -f docker-compose.yml -f docker-compose.rw.yml run --rm ragent \
-  "fix the typo in README"
+docker compose -f docker-compose.yml -f docker-compose.ro.yml run --rm ragent \
+  "explain what this project does"
 ```
 
-In this mode ragent has write access to `/workspace`. Only use it when you trust
-the prompt and have reviewed the target repository.
+In this mode the agent can explore and propose patches but cannot apply them.
+Run artifacts go to `/tmp/ragent-runs` inside the container and are lost when it exits.
 
 ### Network-off mode
 
@@ -282,13 +280,6 @@ unset OPENAI_API_KEY
 docker compose -f docker-compose.yml -f docker-compose.nonet.yml run --rm ragent "list files"
 ```
 
-Network-off can be stacked with the read-write override:
-
-```bash
-docker compose -f docker-compose.yml -f docker-compose.rw.yml \
-               -f docker-compose.nonet.yml run --rm ragent "..."
-```
-
 ### Security hardening
 
 The default `docker-compose.yml` applies several restrictions:
@@ -296,14 +287,14 @@ The default `docker-compose.yml` applies several restrictions:
 | Control | Setting |
 |---|---|
 | User | Non-root (`ragent`, uid 1000) |
-| `/workspace` | Read-only bind mount |
+| `/workspace` | Read-write bind mount |
 | `/app` | Read-only bind mount |
 | Linux capabilities | All dropped (`cap_drop: ALL`) |
 | New privileges | Blocked (`no-new-privileges:true`) |
 | Memory | 512 MB limit |
 | PIDs | 64 process limit |
 | Privileged mode | Disabled |
-| Writable surface | `/tmp` only (tmpfs, ephemeral) |
+| Writable surface | `/workspace` (bind mount) and `/tmp` (tmpfs) |
 
 #### Security limitations
 
@@ -314,6 +305,9 @@ The default `docker-compose.yml` applies several restrictions:
   depending on how the bind mount is set up.
 - **`cap_drop: ALL` does not sandbox syscalls**. A malicious binary could still
   make arbitrary syscalls. Use a seccomp profile for stronger isolation.
+- **`/workspace` is writable by default** — a compromised prompt can modify the
+  target repo even without `--allow-commands`. Use `docker-compose.ro.yml` to restrict
+  the agent to read-only exploration, or review prompts carefully before running.
 - **Network is unrestricted by default** — the agent has full outbound access
   (needed for the OpenAI API). Use `docker-compose.nonet.yml` to disable it
   entirely, at the cost of only being able to use the fake or a pre-bundled model.

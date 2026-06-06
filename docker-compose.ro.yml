@@ -1,0 +1,11 @@
+# Read-only override: mounts /workspace as read-only so the agent can explore
+# but cannot apply patches or write run artifacts to the workspace.
+# Run artifacts are stored at /tmp/ragent-runs inside the container (ephemeral).
+#
+# Usage:
+#   docker compose -f docker-compose.yml -f docker-compose.ro.yml run --rm ragent "explain this repo"
+services:
+  ragent:
+    volumes:
+      - .:/app:ro
+      - ${WORKSPACE_PATH:-./workspace}:/workspace:ro
