@@ -4,6 +4,7 @@ services:
     volumes:
       - .:/app:ro
       - ${WORKSPACE_PATH:-./workspace}:/workspace
+      - gem-cache:/usr/local/bundle
     environment:
       - RAGENT_WORKSPACE=/workspace
       - OPENAI_API_KEY
@@ -18,3 +19,6 @@ services:
     privileged: false
     tmpfs:
       - /tmp:mode=1777
+
+volumes:
+  gem-cache:

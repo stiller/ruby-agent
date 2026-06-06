@@ -11,7 +11,8 @@ module Ragent
     end
 
     def call(proposal)
-      @output.puts "$ #{proposal.command}"
+      @output.puts "\n#{Terminal.section('Proposed command')}"
+      @output.puts Terminal.fmt("$ #{proposal.command}", :bold)
       @output.puts "Reason: #{proposal.reason}"
       return true if @auto_approve && @allow_commands
       return true if allowlisted?(proposal.command)

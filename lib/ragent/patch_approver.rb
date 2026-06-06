@@ -9,7 +9,8 @@ module Ragent
     end
 
     def call(patch_file)
-      @output.puts File.read(patch_file)
+      @output.puts "\n#{Terminal.section('Proposed patch')}"
+      @output.puts Terminal.colorize_diff(File.read(patch_file))
       return true if @auto_approve
 
       @output.print 'Apply this patch? [y/N] '

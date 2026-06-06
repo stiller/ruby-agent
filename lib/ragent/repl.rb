@@ -88,7 +88,7 @@ module Ragent
       loop_obj.on_tool_call = ->(tool, args) { Ragent.send(:print_tool_progress, tool, args) }
       result = loop_obj.run
       @history = loop_obj.messages + [{ role: 'assistant', content: result }]
-      @output.puts "\n=== Answer ===\n#{result}\n"
+      @output.puts "\n#{Terminal.answer_header}\n#{result}\n"
     rescue StandardError => e
       @output.puts "Error: #{e.message}"
     end

@@ -1,5 +1,6 @@
 # frozen_string_literal: true
 
+require_relative 'ragent/terminal'
 require_relative 'ragent/workspace'
 require_relative 'ragent/response'
 require_relative 'ragent/model_client'

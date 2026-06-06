@@ -5,7 +5,13 @@ $LOAD_PATH.unshift(File.join(__dir__, '..', 'lib'))
 require 'ragent'
 require 'optparse'
 
-options = { workspace: Ragent::Workspace::DEFAULT_PATH, auto_approve: false, keep_runs: true, allow_commands: false }
+options = {
+  workspace: Ragent::Workspace::DEFAULT_PATH,
+  auto_approve: false,
+  keep_runs: true,
+  allow_commands: false,
+  color: $stderr.isatty && ENV['NO_COLOR'].nil?
+}
 
 OptionParser.new do |opts|
   opts.banner = 'Usage: ragent [options] "your prompt here"'
@@ -21,7 +27,12 @@ OptionParser.new do |opts|
   opts.on('--allow-commands', 'Allow the agent to propose shell commands (required for --yes to auto-run them)') do
     options[:allow_commands] = true
   end
+  opts.on('--no-color', 'Disable ANSI color output') do
+    options[:color] = false
+  end
 end.parse!
+
+Ragent::Terminal.color = options[:color]
 
 if ARGV[0] == 'rollback'
   run_dir = ARGV[1]

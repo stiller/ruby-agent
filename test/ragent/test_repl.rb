@@ -94,7 +94,7 @@ class TestRepl < Minitest::Test
   def test_answer_section_header_is_printed
     client = make_client { Ragent::Response::Final.new(content: 'answer') }
     run_repl('do something', '/exit', client: client)
-    assert_includes @out.string, '=== Answer ==='
+    assert_includes @out.string, '── Answer ──'
   end
 
   # --- history ---

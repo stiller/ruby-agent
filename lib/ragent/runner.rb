@@ -148,7 +148,7 @@ module Ragent
 
   def self.print_tool_progress(tool, args)
     parts = args.map { |k, v| "#{k}: #{format_arg(v)}" }.join(', ')
-    warn parts.empty? ? "[#{tool}]" : "[#{tool}] #{parts}"
+    warn Terminal.tool_line(tool, parts)
   end
   private_class_method :print_tool_progress
 
@@ -159,7 +159,7 @@ module Ragent
   private_class_method :format_arg
 
   def self.print_result(content)
-    warn "\n=== Answer ==="
+    warn "\n#{Terminal.answer_header}"
     puts content
   end
   private_class_method :print_result
@@ -234,7 +234,7 @@ module Ragent
       return proposal.to_s unless proposal.is_a?(Tools::ProposeCommand::Result)
 
       if command_approver.call(proposal)
-        Tools::RunCommand.new(workspace).call(command).to_s
+        Tools::RunCommand.new(workspace, output: $stderr).call(command).to_s
       else
         'Command denied by user.'
       end
