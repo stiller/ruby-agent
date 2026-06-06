@@ -1,0 +1,17 @@
+# Network-off override: removes all network interfaces from the container.
+# The agent cannot reach external APIs (including OpenAI) in this mode.
+#
+# Compatible model clients:
+#   - FakeModelClient (no OPENAI_API_KEY set) — no network required
+#   - A local model server running on the host is NOT reachable in this mode;
+#     use --network host (Linux only) or a custom Docker network instead.
+#
+# Usage:
+#   docker compose -f docker-compose.yml -f docker-compose.nonet.yml run --rm ragent "..."
+#
+# Combining with read-write mode:
+#   docker compose -f docker-compose.yml -f docker-compose.rw.yml \
+#                  -f docker-compose.nonet.yml run --rm ragent "..."
+services:
+  ragent:
+    network_mode: "none"

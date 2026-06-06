@@ -255,6 +255,40 @@ docker compose -f docker-compose.yml -f docker-compose.rw.yml run --rm ragent \
 In this mode ragent has write access to `/workspace`. Only use it when you trust
 the prompt and have reviewed the target repository.
 
+### Network-off mode
+
+For maximum isolation, disable all container networking:
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.nonet.yml run --rm ragent "list files"
+```
+
+The container gets no network interfaces at all — not even loopback — so it cannot
+reach the OpenAI API or any other external service.
+
+**Model clients compatible with network-off mode:**
+
+| Client | How to use |
+|---|---|
+| `FakeModelClient` | Unset `OPENAI_API_KEY` (or remove it from the environment). Calls `list_files` once and returns a placeholder answer. Useful for testing the harness itself. |
+| Local model on host | **Not reachable** with `network_mode: none`. Use `--network host` (Linux only) or a shared Docker network instead. |
+| OpenAI API | **Not reachable**. Will fail with a connection error at startup. |
+
+To run a real offline workflow, combine network-off mode with the fake client:
+
+```bash
+# No API key → FakeModelClient → no network needed
+unset OPENAI_API_KEY
+docker compose -f docker-compose.yml -f docker-compose.nonet.yml run --rm ragent "list files"
+```
+
+Network-off can be stacked with the read-write override:
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.rw.yml \
+               -f docker-compose.nonet.yml run --rm ragent "..."
+```
+
 ### Security hardening
 
 The default `docker-compose.yml` applies several restrictions:
@@ -280,8 +314,8 @@ The default `docker-compose.yml` applies several restrictions:
   depending on how the bind mount is set up.
 - **`cap_drop: ALL` does not sandbox syscalls**. A malicious binary could still
   make arbitrary syscalls. Use a seccomp profile for stronger isolation.
-- **Network is unrestricted** — the agent has full outbound access (needed for the
-  OpenAI API). If pointing at a model on localhost, the container can reach the
-  host network.
+- **Network is unrestricted by default** — the agent has full outbound access
+  (needed for the OpenAI API). Use `docker-compose.nonet.yml` to disable it
+  entirely, at the cost of only being able to use the fake or a pre-bundled model.
 - **Memory and PID limits** are a DoS floor, not a security boundary. They do not
   prevent a sufficiently patient process from exhausting other resources.
