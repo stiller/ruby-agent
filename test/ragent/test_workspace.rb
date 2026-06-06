@@ -70,4 +70,39 @@ class TestWorkspace < Minitest::Test
       assert_equal 1, count
     end
   end
+
+  def test_ensure_ragent_ignored_is_silent_on_read_only_workspace
+    skip 'cannot test read-only filesystem as root' if Process.uid.zero?
+    Dir.mktmpdir do |dir|
+      FileUtils.chmod(0o555, dir)
+      assert_nil Ragent::Workspace.ensure_ragent_ignored!(dir)
+    ensure
+      FileUtils.chmod(0o755, dir)
+    end
+  end
+
+  def test_resolve_runs_dir_returns_path_under_workspace
+    Dir.mktmpdir do |dir|
+      result = Ragent::Workspace.resolve_runs_dir(dir)
+      assert result.start_with?(dir), "expected #{result} to be under #{dir}"
+    end
+  end
+
+  def test_resolve_runs_dir_creates_the_directory
+    Dir.mktmpdir do |dir|
+      result = Ragent::Workspace.resolve_runs_dir(dir)
+      assert Dir.exist?(result)
+    end
+  end
+
+  def test_resolve_runs_dir_falls_back_for_read_only_workspace
+    skip 'cannot test read-only filesystem as root' if Process.uid.zero?
+    Dir.mktmpdir do |dir|
+      FileUtils.chmod(0o555, dir)
+      result = Ragent::Workspace.resolve_runs_dir(dir)
+      assert_equal Ragent::Workspace::READONLY_RUNS_DIR, result
+    ensure
+      FileUtils.chmod(0o755, dir)
+    end
+  end
 end

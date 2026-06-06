@@ -223,20 +223,65 @@ docker compose build
 docker compose run --rm ragent "hello"
 ```
 
-This mounts the current project into `/app` inside the container.
+By default `/workspace` is mounted **read-only**. The agent can explore and propose
+patches, but cannot apply them. Run artifacts go to `/tmp/ragent-runs` inside the
+container and are lost when it exits.
 
 ### Point at a target repository
 
 Set `WORKSPACE_PATH` to the absolute path of the repo you want ragent to work on:
 
 ```bash
-WORKSPACE_PATH=/path/to/your/repo docker compose run --rm ragent "hello"
+WORKSPACE_PATH=/path/to/your/repo docker compose run --rm ragent "summarize this repo"
 ```
 
-The repo will be mounted at `/workspace` inside the container, which is the default workspace root the CLI uses.
-
-You can also set it permanently in a `.env` file:
+The repo is mounted at `/workspace` inside the container, which is the default
+workspace root the CLI uses. Set it permanently in a `.env` file:
 
 ```
 WORKSPACE_PATH=/path/to/your/repo
 ```
+
+### Applying patches (read-write mode)
+
+To let the agent apply patches and write run artifacts to the workspace, use the
+read-write override:
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.rw.yml run --rm ragent \
+  "fix the typo in README"
+```
+
+In this mode ragent has write access to `/workspace`. Only use it when you trust
+the prompt and have reviewed the target repository.
+
+### Security hardening
+
+The default `docker-compose.yml` applies several restrictions:
+
+| Control | Setting |
+|---|---|
+| User | Non-root (`ragent`, uid 1000) |
+| `/workspace` | Read-only bind mount |
+| `/app` | Read-only bind mount |
+| Linux capabilities | All dropped (`cap_drop: ALL`) |
+| New privileges | Blocked (`no-new-privileges:true`) |
+| Memory | 512 MB limit |
+| PIDs | 64 process limit |
+| Privileged mode | Disabled |
+| Writable surface | `/tmp` only (tmpfs, ephemeral) |
+
+#### Security limitations
+
+- **The agent runs shell commands** when `--allow-commands` is passed. With write
+  access to `/workspace`, a compromised prompt can modify the target repo.
+- **The uid 1000 mapping** depends on host filesystem permissions. On Linux, files
+  owned by a different uid may be inaccessible or writable by the container user
+  depending on how the bind mount is set up.
+- **`cap_drop: ALL` does not sandbox syscalls**. A malicious binary could still
+  make arbitrary syscalls. Use a seccomp profile for stronger isolation.
+- **Network is unrestricted** — the agent has full outbound access (needed for the
+  OpenAI API). If pointing at a model on localhost, the container can reach the
+  host network.
+- **Memory and PID limits** are a DoS floor, not a security boundary. They do not
+  prevent a sufficiently patient process from exhausting other resources.

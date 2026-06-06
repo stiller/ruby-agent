@@ -2,10 +2,19 @@ services:
   ragent:
     build: .
     volumes:
-      - .:/app
-      - ${WORKSPACE_PATH:-./workspace}:/workspace
+      - .:/app:ro
+      - ${WORKSPACE_PATH:-./workspace}:/workspace:ro
     environment:
       - RAGENT_WORKSPACE=/workspace
       - OPENAI_API_KEY
       - OPENAI_BASE_URL
       - RAGENT_MODEL
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    mem_limit: 512m
+    pids_limit: 64
+    privileged: false
+    tmpfs:
+      - /tmp:mode=1777
