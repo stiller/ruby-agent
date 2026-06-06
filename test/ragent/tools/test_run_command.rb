@@ -46,10 +46,11 @@ class TestRunCommand < Minitest::Test
   end
 
   def test_truncates_long_stdout
+    limit = Ragent::Tools::RunCommand::MAX_MODEL_LINES
     tool = Ragent::Tools::RunCommand.new(@dir)
-    result = tool.call("ruby -e 'print \"x\" * #{Ragent::Tools::RunCommand::MAX_OUTPUT + 100}'")
-    assert_includes result.stdout, '[output truncated]'
-    assert result.stdout.bytesize <= Ragent::Tools::RunCommand::MAX_OUTPUT + 30
+    result = tool.call("seq #{limit * 2}")
+    assert_includes result.stdout, 'lines omitted'
+    assert result.stdout.lines.size <= limit + 1
   end
 
   def test_returns_error_on_timeout

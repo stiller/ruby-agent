@@ -286,11 +286,9 @@ The default `docker-compose.yml` applies several restrictions:
 
 | Control | Setting |
 |---|---|
-| User | Non-root (`ragent`, uid 1000) |
+| User | root (inside container) |
 | `/workspace` | Read-write bind mount |
 | `/app` | Read-only bind mount |
-| Linux capabilities | All dropped (`cap_drop: ALL`) |
-| New privileges | Blocked (`no-new-privileges:true`) |
 | Memory | 512 MB limit |
 | PIDs | 64 process limit |
 | Privileged mode | Disabled |
@@ -300,11 +298,8 @@ The default `docker-compose.yml` applies several restrictions:
 
 - **The agent runs shell commands** when `--allow-commands` is passed. With write
   access to `/workspace`, a compromised prompt can modify the target repo.
-- **The uid 1000 mapping** depends on host filesystem permissions. On Linux, files
-  owned by a different uid may be inaccessible or writable by the container user
-  depending on how the bind mount is set up.
-- **`cap_drop: ALL` does not sandbox syscalls**. A malicious binary could still
-  make arbitrary syscalls. Use a seccomp profile for stronger isolation.
+- **The container runs as root**, so a compromised prompt has full access to the
+  container filesystem. The security boundary is the container itself, not the user.
 - **`/workspace` is writable by default** — a compromised prompt can modify the
   target repo even without `--allow-commands`. Use `docker-compose.ro.yml` to restrict
   the agent to read-only exploration, or review prompts carefully before running.

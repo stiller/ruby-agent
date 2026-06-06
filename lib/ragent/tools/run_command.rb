@@ -5,8 +5,8 @@ require 'open3'
 module Ragent
   module Tools
     class RunCommand
-      MAX_OUTPUT = 50 * 1024
       MAX_DISPLAY_LINES = 20
+      MAX_MODEL_LINES = 50
 
       Result = Struct.new(:command, :stdout, :stderr, :exit_status, keyword_init: true) do
         def to_s
@@ -61,9 +61,11 @@ module Ragent
 
       def stream_read(io)
         buf = +''
+        last = nil
         io.each_line do |line|
           buf << line
-          show_line(line)
+          show_line(line) unless line == last
+          last = line
         end
         buf
       rescue IOError
@@ -102,9 +104,12 @@ module Ragent
       end
 
       def truncate(str)
-        return str if str.bytesize <= MAX_OUTPUT
+        lines = str.lines
+        return str if lines.size <= MAX_MODEL_LINES
 
-        "#{str.byteslice(0, MAX_OUTPUT)}\n[output truncated]"
+        half = MAX_MODEL_LINES / 2
+        omitted = lines.size - MAX_MODEL_LINES
+        (lines.first(half) + ["[... #{omitted} lines omitted ...]\n"] + lines.last(half)).join
       end
     end
   end

@@ -10,10 +10,6 @@ services:
       - OPENAI_API_KEY
       - OPENAI_BASE_URL
       - RAGENT_MODEL
-    cap_drop:
-      - ALL
-    security_opt:
-      - no-new-privileges:true
     mem_limit: 512m
     pids_limit: 64
     privileged: false
