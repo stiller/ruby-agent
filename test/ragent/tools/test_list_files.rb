@@ -108,6 +108,47 @@ class TestListFiles < Minitest::Test
     assert_equal 3, list.size
   end
 
+  # --- max_depth ---
+
+  def test_max_depth_1_includes_toplevel_files
+    FileUtils.touch(File.join(@dir, 'root.rb'))
+    touch_inside('subdir', 'nested.rb')
+    result = list(max_depth: 1)
+    assert_includes result, 'root.rb'
+  end
+
+  def test_max_depth_1_excludes_nested_files
+    touch_inside('subdir', 'nested.rb')
+    result = list(max_depth: 1)
+    assert(result.none? { |f| f == 'subdir/nested.rb' })
+  end
+
+  def test_max_depth_1_includes_directory_entries_with_slash
+    touch_inside('subdir', 'nested.rb')
+    result = list(max_depth: 1)
+    assert_includes result, 'subdir/'
+  end
+
+  def test_max_depth_2_includes_one_level_deep_files
+    touch_inside('a/b', 'deep.rb')
+    result = list(max_depth: 2)
+    assert_includes result, 'a/'
+    assert_includes result, 'a/b/'
+    assert(result.none? { |f| f == 'a/b/deep.rb' })
+  end
+
+  def test_max_depth_nil_unchanged
+    touch_inside('subdir', 'nested.rb')
+    assert_includes list, 'subdir/nested.rb'
+    assert(list.none? { |f| f == 'subdir/' })
+  end
+
+  def test_max_depth_does_not_include_ignored_dirs
+    touch_inside('node_modules/pkg', 'index.js')
+    result = list(max_depth: 1)
+    assert(result.none? { |f| f.start_with?('node_modules') })
+  end
+
   # --- symlink safety ---
 
   def test_skips_symlinks_pointing_outside_repo
@@ -138,8 +179,8 @@ class TestListFiles < Minitest::Test
 
   private
 
-  def list(limit: Ragent::Tools::ListFiles::DEFAULT_LIMIT, ignored_paths: [])
-    Ragent::Tools::ListFiles.new(@dir, limit: limit, ignored_paths: ignored_paths).call
+  def list(limit: Ragent::Tools::ListFiles::DEFAULT_LIMIT, ignored_paths: [], max_depth: nil)
+    Ragent::Tools::ListFiles.new(@dir, limit: limit, ignored_paths: ignored_paths).call(max_depth: max_depth)
   end
 
   def touch_inside(subdir, filename)

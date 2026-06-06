@@ -49,6 +49,8 @@ module Ragent
     end
 
     def serialize_assistant(msg)
+      return { role: 'assistant', content: msg[:content].to_s } unless msg[:tool_calls]
+
       tc = msg[:tool_calls].first
       {
         role: 'assistant', content: nil,

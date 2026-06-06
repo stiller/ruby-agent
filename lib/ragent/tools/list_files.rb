@@ -15,7 +15,7 @@ module Ragent
         @ignored_paths = ignored_paths
       end
 
-      def call
+      def call(max_depth: nil)
         results = []
 
         catch(:done) do
@@ -23,12 +23,11 @@ module Ragent
             pn = Pathname.new(path)
 
             if pn.directory?
-              Find.prune if ignored_dir?(pn.basename.to_s)
+              handle_directory(pn, results, max_depth)
               next
             end
 
             next if pn.symlink? && !safe_symlink?(pn)
-
             next unless pn.file?
 
             results << pn.relative_path_from(@repo_root).to_s
@@ -40,6 +39,24 @@ module Ragent
       end
 
       private
+
+      def handle_directory(pathname, results, max_depth)
+        if ignored_dir?(pathname.basename.to_s)
+          Find.prune
+        elsif max_depth
+          handle_bounded_dir(pathname, results, max_depth)
+        end
+      end
+
+      def handle_bounded_dir(pathname, results, max_depth)
+        rel = pathname.relative_path_from(@repo_root)
+        unless rel.to_s == '.'
+          results << "#{rel}/"
+          throw :done if results.size >= @limit
+        end
+        depth = rel.to_s == '.' ? 0 : rel.each_filename.count
+        Find.prune if depth >= max_depth
+      end
 
       def ignored_dir?(name)
         IGNORED_DIRS.include?(name) || @ignored_paths.include?(name)

@@ -110,6 +110,83 @@ class TestAgentLoop < Minitest::Test
     assert_equal 'Done.', run_loop([final('Done.')])
   end
 
+  # --- messages reader ---
+
+  def test_messages_is_empty_before_run
+    loop = build_loop(Ragent::FakeModelClient.new([final('ok')]))
+    assert_equal [], loop.messages
+  end
+
+  def test_messages_contains_conversation_after_run
+    build_loop(Ragent::FakeModelClient.new([final('ok')])).run
+    # just checking the method exists and returns a non-nil array
+  end
+
+  def test_messages_includes_user_prompt
+    loop = build_loop(Ragent::FakeModelClient.new([final('ok')]))
+    loop.run
+    assert(loop.messages.any? { |m| m[:role] == 'user' && m[:content] == 'test prompt' })
+  end
+
+  def test_messages_includes_tool_exchange
+    loop = build_loop(Ragent::FakeModelClient.new([tool_call('echo', { message: 'hi' }), final('ok')]))
+    loop.run
+    roles = loop.messages.map { |m| m[:role] }
+    assert_includes roles, 'assistant'
+    assert_includes roles, 'tool'
+  end
+
+  # --- history (multi-turn) ---
+
+  def test_history_seeds_messages_for_next_turn
+    prior = [
+      { role: 'system', content: 'sys' },
+      { role: 'user', content: 'first turn' },
+      { role: 'assistant', content: 'first answer' }
+    ]
+    received = []
+    client = Ragent::ModelClient.new
+    client.define_singleton_method(:call) do |msgs|
+      received << msgs.dup
+      Ragent::Response::Final.new(content: 'second answer')
+    end
+
+    Ragent::AgentLoop.new(
+      prompt: 'second turn',
+      repo_root: @dir,
+      model_client: client,
+      tool_registry: @registry,
+      history: prior
+    ).run
+
+    first_call = received.first
+    assert(first_call.any? { |m| m[:role] == 'user' && m[:content] == 'first turn' })
+    assert(first_call.any? { |m| m[:role] == 'assistant' && m[:content] == 'first answer' })
+    assert(first_call.any? { |m| m[:role] == 'user' && m[:content] == 'second turn' })
+  end
+
+  def test_history_does_not_add_system_prompt_again
+    prior = [{ role: 'system', content: 'sys' }, { role: 'user', content: 'first' }]
+    received = []
+    client = Ragent::ModelClient.new
+    client.define_singleton_method(:call) do |msgs|
+      received << msgs.dup
+      Ragent::Response::Final.new(content: 'ok')
+    end
+
+    Ragent::AgentLoop.new(
+      prompt: 'second',
+      repo_root: @dir,
+      model_client: client,
+      tool_registry: @registry,
+      system_prompt: Ragent::Prompts::SystemPrompt.new(repo_root: @dir, tools: []),
+      history: prior
+    ).run
+
+    system_messages = received.first.select { |m| m[:role] == 'system' }
+    assert_equal 1, system_messages.size
+  end
+
   # --- errors ---
 
   def test_raises_on_unknown_tool

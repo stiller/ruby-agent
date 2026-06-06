@@ -53,18 +53,29 @@ if ARGV[0] == 'rollback'
   exit 0
 end
 
-prompt = ARGV[0]
-
-if prompt.nil? || prompt.strip.empty?
-  warn 'Usage: ragent [options] "your prompt here"'
-  exit 1
-end
-
 begin
   workspace = Ragent::Workspace.validate!(options[:workspace])
 rescue Ragent::WorkspaceError => e
   warn "Error: #{e.message}"
   exit 1
+end
+
+prompt = ARGV[0]
+
+if prompt.nil? || prompt.strip.empty?
+  begin
+    config = Ragent::Config.new(workspace)
+    Ragent::Repl.new(
+      workspace: workspace,
+      auto_approve: options[:auto_approve],
+      allow_commands: options[:allow_commands],
+      config: config
+    ).run
+  rescue Ragent::ConfigError => e
+    warn "Error in #{Ragent::Config::FILENAME}: #{e.message}"
+    exit 1
+  end
+  exit 0
 end
 
 begin

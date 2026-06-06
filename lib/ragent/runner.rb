@@ -10,8 +10,19 @@ module Ragent
   TOOL_DEFINITIONS = [
     ToolDefinition.new(
       name: 'list_files',
-      description: 'List all files in the repository. Returns relative paths.',
-      parameters: { type: 'object', properties: {}, required: [] }
+      description: 'List files and directories in the repository. ' \
+                   'Use max_depth: 1 to see only top-level entries (both files and directories). ' \
+                   'Without max_depth, lists all files recursively (up to 200).',
+      parameters: {
+        type: 'object',
+        properties: {
+          max_depth: {
+            type: 'integer',
+            description: 'Max depth to traverse. 1 = direct children of root only. Omit for full recursive listing.'
+          }
+        },
+        required: []
+      }
     ),
     ToolDefinition.new(
       name: 'read_file',
@@ -104,8 +115,9 @@ module Ragent
     keep_runs ? warn("Run artifacts kept at: #{transcript&.run_dir}") : FileUtils.rm_rf(transcript&.run_dir)
   end
 
-  def self.build_loop(prompt, workspace, transcript, approver, command_approver, config:, allow_commands: false)
-    instructions = load_instructions(workspace)
+  def self.build_loop(prompt, workspace, transcript, approver, command_approver,
+                      config:, allow_commands: false, history: nil, model_client: nil)
+    instructions = history ? '' : load_instructions(workspace)
     registry = build_registry(
       workspace, run_dir: transcript.run_dir, approver: approver,
                  command_approver: command_approver, allow_commands: allow_commands, config: config
@@ -113,10 +125,11 @@ module Ragent
     AgentLoop.new(
       prompt: prompt,
       repo_root: workspace,
-      model_client: build_client(prompt),
+      model_client: model_client || build_client(prompt),
       tool_registry: registry,
       transcript: transcript,
-      system_prompt: build_system_prompt(workspace, instructions: instructions)
+      system_prompt: build_system_prompt(workspace, instructions: instructions),
+      history: history
     )
   end
   private_class_method :build_loop
@@ -171,7 +184,9 @@ module Ragent
     replace_all_handler = build_replace_all_handler(workspace, run_dir, approver)
     command_handler = build_command_handler(workspace, command_approver, allow_commands: allow_commands)
     ToolRegistry.new.tap do |r|
-      r.register('list_files') { |_args| t[:list].call.join("\n") }
+      r.register('list_files') do |args|
+        t[:list].call(max_depth: get.call(args, 'max_depth')&.to_i).join("\n")
+      end
       r.register('read_file') { |args| t[:read].call(get.call(args, 'path')).content }
       r.register('search_text') do |args|
         t[:search].call(get.call(args, 'query')).map { |m| "#{m.path}:#{m.line_number}: #{m.line}" }.join("\n")
