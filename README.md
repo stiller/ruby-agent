@@ -2,6 +2,12 @@
 
 An agentic coding harness written in plain Ruby.
 
+<img width="758" height="450" alt="Screenshot 2026-06-06 at 18 14 59" src="https://github.com/user-attachments/assets/c308bd49-9469-42df-b048-b40b97733626" />
+
+<img width="757" height="452" alt="Screenshot 2026-06-06 at 18 15 51" src="https://github.com/user-attachments/assets/6b66cade-121d-461a-82ea-0767df3a3ae2" />
+
+<img width="756" height="214" alt="Screenshot 2026-06-06 at 18 16 42" src="https://github.com/user-attachments/assets/7630399c-a351-484c-99c9-06b5792d7ce5" />
+
 ## Setup
 
 ```bash
