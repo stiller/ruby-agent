@@ -27,6 +27,10 @@ module Ragent
     end
 
     def call(messages)
+      if Terminal.debug?
+        chars = messages.sum { |m| m[:content].to_s.length }
+        Terminal.debug("request model=#{@model} messages=#{messages.size} content=~#{chars}chars")
+      end
       data = post('/v1/chat/completions', build_body(messages))
       parse_response(data)
     end

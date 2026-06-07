@@ -109,6 +109,7 @@ module Ragent
 
         half = MAX_MODEL_LINES / 2
         omitted = lines.size - MAX_MODEL_LINES
+        Terminal.debug("output truncated: #{lines.size} lines → #{MAX_MODEL_LINES} shown (#{half} head + #{half} tail)")
         (lines.first(half) + ["[... #{omitted} lines omitted ...]\n"] + lines.last(half)).join
       end
     end

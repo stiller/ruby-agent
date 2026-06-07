@@ -13,12 +13,23 @@ module Ragent
     }.freeze
 
     @color = false
+    @debug = false
 
     class << self
-      attr_writer :color
+      attr_writer :color, :debug
 
       def color?
         @color
+      end
+
+      def debug?
+        @debug
+      end
+
+      def debug(msg)
+        return unless @debug
+
+        warn fmt("[debug] #{msg}", :dim)
       end
 
       def fmt(text, *codes)

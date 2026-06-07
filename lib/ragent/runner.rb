@@ -104,6 +104,7 @@ module Ragent
   def self.run(prompt, workspace: Workspace::DEFAULT_PATH, auto_approve: false, keep_runs: true, allow_commands: false)
     Workspace.ensure_ragent_ignored!(workspace)
     transcript = Transcript.new(runs_dir: Workspace.resolve_runs_dir(workspace))
+    Terminal.debug("run_dir=#{transcript.run_dir}")
     config = Config.new(workspace)
     approver = PatchApprover.new(auto_approve: auto_approve || config.approval_mode == 'auto')
     command_approver = CommandApprover.new(

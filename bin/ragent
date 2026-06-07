@@ -10,7 +10,8 @@ options = {
   auto_approve: false,
   keep_runs: true,
   allow_commands: false,
-  color: $stderr.isatty && ENV['NO_COLOR'].nil?
+  color: $stderr.isatty && ENV['NO_COLOR'].nil?,
+  debug: false
 }
 
 OptionParser.new do |opts|
@@ -30,9 +31,13 @@ OptionParser.new do |opts|
   opts.on('--no-color', 'Disable ANSI color output') do
     options[:color] = false
   end
+  opts.on('--debug', 'Print debug info: request metadata, tool call JSON, truncation notices') do
+    options[:debug] = true
+  end
 end.parse!
 
 Ragent::Terminal.color = options[:color]
+Ragent::Terminal.debug = options[:debug]
 
 if ARGV[0] == 'rollback'
   run_dir = ARGV[1]
