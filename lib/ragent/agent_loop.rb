@@ -4,7 +4,7 @@ require 'json'
 
 module Ragent
   class AgentLoop
-    MAX_ITERATIONS = 10
+    MAX_ITERATIONS = 20
 
     attr_writer :on_tool_call
     attr_reader :messages

@@ -68,7 +68,7 @@ class TestAgentLoop < Minitest::Test
   # --- limits ---
 
   def test_raises_after_max_iterations
-    responses = Array.new(11) { tool_call('echo', { message: 'x' }) }
+    responses = Array.new(21) { tool_call('echo', { message: 'x' }) }
     err = assert_raises(RuntimeError) { run_loop(responses) }
     assert_match 'exceeded maximum', err.message
   end

@@ -2,7 +2,9 @@
 
 module Ragent
   class Repl
-    PROMPT = '>> '
+    PROMPT      = '>> '
+    PASTE_START = "\e[200~"
+    PASTE_END   = "\e[201~"
 
     def initialize(workspace:, auto_approve:, allow_commands:, config:,
                    input: $stdin, output: $stderr, model_client: nil,
@@ -35,11 +37,33 @@ module Ragent
 
     private
 
+    def tty?
+      @input.is_a?(IO) && @input.isatty
+    end
+
+    def enable_bracketed_paste
+      return unless tty?
+
+      @output.print "\e[?2004h"
+      @output.flush
+    end
+
+    def disable_bracketed_paste
+      return unless tty?
+
+      @output.print "\e[?2004l"
+      @output.flush
+    end
+
     def read_prompt
+      enable_bracketed_paste
       @output.print PROMPT
       @output.flush
       line = @input.gets
+      disable_bracketed_paste
       return nil if line.nil?
+
+      return read_bracketed_paste(line.delete_prefix(PASTE_START)) if line.start_with?(PASTE_START)
 
       buffer = line.chomp
       while paste_pending?
@@ -51,10 +75,25 @@ module Ragent
       buffer.strip
     end
 
+    def read_bracketed_paste(first_chunk)
+      buffer = first_chunk.gsub("\r\n", "\n").gsub("\r", "\n").chomp.dup
+      loop do
+        line = @input.gets
+        break if line.nil?
+
+        if (idx = line.index(PASTE_END))
+          buffer << "\n" << line[0, idx].gsub("\r", '')
+          break
+        end
+        buffer << "\n" << line.chomp
+      end
+      buffer.strip
+    end
+
     def paste_pending?
       return false unless @input.is_a?(IO)
 
-      @input.wait_readable(0.05)
+      @input.wait_readable(0.15)
     rescue IOError
       false
     end
