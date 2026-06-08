@@ -54,7 +54,7 @@ module Ragent
     def paste_pending?
       return false unless @input.is_a?(IO)
 
-      @input.wait_readable(0)
+      @input.wait_readable(0.05)
     rescue IOError
       false
     end
