@@ -2,3 +2,5 @@
 .ragent.yml
 AGENTS.md
 .claude/
+.env
+
