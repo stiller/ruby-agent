@@ -241,14 +241,11 @@ secrets into the container.
 
 | Mode | Command shape | Workspace | Commands | Network |
 |---|---|---|---|---|
+| *(default)* | `docker compose run --rm ragent "..."` | Read-write | Not enabled | Default |
 | `inspect` | `docker compose -f docker-compose.yml -f docker-compose.ro.yml run --rm ragent "..."` | Read-only | Not enabled | Default |
 | `develop` | `docker compose run --rm ragent --allow-commands "..."` | Read-write | Prompt for approval | Default |
 | `danger` | `docker compose run --rm ragent --yes --allow-commands "..."` | Read-write | Auto-approved, except built-in dangerous-command rejection | Default |
 | `offline` | `docker compose -f docker-compose.yml -f docker-compose.nonet.yml run --rm ragent "..."` | Read-write unless combined with `docker-compose.ro.yml` | Not enabled unless `--allow-commands` is passed | Disabled |
-
-The plain default command (`docker compose run --rm ragent "..."`) uses a
-read-write workspace, prompts before applying patches, and does not allow shell
-commands. Use the named modes above to make the tradeoff explicit.
 
 `/workspace` is mounted **read-write** by default so the agent can apply patches
 and write run artifacts to `<workspace>/.ragent/runs/`.
