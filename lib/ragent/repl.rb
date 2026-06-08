@@ -23,14 +23,10 @@ module Ragent
       Workspace.ensure_ragent_ignored!(@workspace)
       @output.puts 'ragent interactive — type a task, /help for commands, /exit to quit.'
       loop do
-        @output.print PROMPT
-        @output.flush
-        line = @input.gets
-        break if line.nil?
-
-        line = line.strip
-        next if line.empty?
-        break if handle(line) == :exit
+        prompt = read_prompt
+        break if prompt.nil?
+        next if prompt.empty?
+        break if handle(prompt) == :exit
       end
       @output.puts "\nBye."
     ensure
@@ -38,6 +34,30 @@ module Ragent
     end
 
     private
+
+    def read_prompt
+      @output.print PROMPT
+      @output.flush
+      line = @input.gets
+      return nil if line.nil?
+
+      buffer = line.chomp
+      while paste_pending?
+        line = @input.gets
+        break if line.nil?
+
+        buffer << "\n" << line.chomp
+      end
+      buffer.strip
+    end
+
+    def paste_pending?
+      return false unless @input.is_a?(IO)
+
+      @input.wait_readable(0)
+    rescue IOError
+      false
+    end
 
     def handle(line)
       return dispatch_command(line) if line.start_with?('/')

@@ -10,6 +10,7 @@ module Ragent
   class OpenAIClient < ModelClient
     DEFAULT_BASE_URL = 'https://api.openai.com'
     DEFAULT_MODEL = 'gpt-4o'
+    MAX_RETRIES = 3
 
     def initialize(
       tool_definitions: [],
@@ -66,21 +67,44 @@ module Ragent
     end
 
     def post(path, body)
-      uri = URI("#{@base_url}#{path}")
-      http = Net::HTTP.new(uri.host, uri.port)
-      http.use_ssl = uri.scheme == 'https'
-      http.open_timeout = 10
-      http.read_timeout = 120
+      retries = 0
+      loop do
+        uri = URI("#{@base_url}#{path}")
+        http = Net::HTTP.new(uri.host, uri.port)
+        http.use_ssl = uri.scheme == 'https'
+        http.open_timeout = 10
+        http.read_timeout = 120
 
-      req = Net::HTTP::Post.new(uri.path)
-      req['Authorization'] = "Bearer #{@api_key}"
-      req['Content-Type'] = 'application/json'
-      req.body = JSON.generate(body)
+        req = Net::HTTP::Post.new(uri.path)
+        req['Authorization'] = "Bearer #{@api_key}"
+        req['Content-Type'] = 'application/json'
+        req.body = JSON.generate(body)
 
-      resp = http.request(req)
-      raise APIError, "HTTP #{resp.code}: #{resp.body}" unless resp.is_a?(Net::HTTPSuccess)
+        resp = http.request(req)
 
-      JSON.parse(resp.body)
+        if resp.code == '429' && retries < MAX_RETRIES
+          retries += 1
+          wait = parse_retry_after(resp)
+          warn Terminal.fmt("Rate limit; waiting #{wait}s (retry #{retries}/#{MAX_RETRIES})…", :yellow)
+          sleep(wait)
+          next
+        end
+
+        raise APIError, "HTTP #{resp.code}: #{resp.body}" unless resp.is_a?(Net::HTTPSuccess)
+
+        return JSON.parse(resp.body)
+      end
+    end
+
+    def parse_retry_after(resp)
+      header = resp['Retry-After']
+      return header.to_f.ceil if header&.to_f&.positive?
+
+      if (m = resp.body.to_s.match(/try again in ([\d.]+)s/))
+        m[1].to_f.ceil + 1
+      else
+        10
+      end
     end
 
     def parse_response(data)
