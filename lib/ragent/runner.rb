@@ -49,8 +49,10 @@ module Ragent
     ),
     ToolDefinition.new(
       name: 'propose_patch',
-      description: 'Propose a code change as a plain unified diff ' \
-                   '(--- / +++ / @@ format only, no git headers). Not applied.',
+      description: 'Propose a code change as a plain unified diff (--- / +++ / @@ format only, no git headers). ' \
+                   'Rules: (1) To edit an existing file, use the same filename in both --- and +++ lines. ' \
+                   '(2) To create a new file, use "--- /dev/null" and "+++ filename". ' \
+                   '(3) Never use different real filenames in --- and +++ — that will be rejected.',
       parameters: {
         type: 'object',
         properties: { diff: { type: 'string', description: 'A unified diff in standard unified format.' } },

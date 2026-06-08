@@ -84,7 +84,7 @@ class TestProposePatch < Minitest::Test
   def test_rejects_absolute_path_in_diff
     diff = "--- a/lib/foo.rb\n+++ /etc/passwd\n"
     result = @tool.call(diff)
-    assert_match(/outside/i, result.to_s)
+    assert_match(/rejected/i, result.to_s)
   end
 
   # --- ignored directories ---

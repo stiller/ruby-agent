@@ -26,6 +26,9 @@ module Ragent
       end
 
       def call(diff)
+        err = validate_headers(diff)
+        return err if err
+
         paths = extract_paths(diff)
         return Error.new(reason: 'no file paths found in diff') if paths.empty?
 
@@ -50,6 +53,31 @@ module Ragent
           paths << path.sub(%r{\A[ab]/}, '')
         end
         paths.uniq
+      end
+
+      def validate_headers(diff)
+        minus, plus = extract_header_paths(diff)
+        return nil unless minus && plus
+
+        src = minus == File::NULL ? nil : minus
+        dst = plus == File::NULL ? nil : plus
+        return nil if src.nil? || dst.nil? || src == dst
+
+        Error.new(reason: "source '#{minus}' and target '#{plus}' filenames differ; " \
+                          "to create a new file use '--- /dev/null', " \
+                          'to edit a file use the same filename in both --- and +++ lines')
+      end
+
+      def extract_header_paths(diff)
+        minus = plus = nil
+        diff.to_s.each_line do |line|
+          if line.start_with?('--- ')
+            minus = line[4..].chomp.sub(%r{\A[ab]/}, '')
+          elsif line.start_with?('+++ ')
+            plus = line[4..].chomp.sub(%r{\A[ab]/}, '')
+          end
+        end
+        [minus, plus]
       end
 
       def validate_path(path)
