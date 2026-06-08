@@ -36,6 +36,33 @@ class TestWorkspace < Minitest::Test
     assert_equal ENV.fetch('RAGENT_WORKSPACE', '/workspace'), Ragent::Workspace::DEFAULT_PATH
   end
 
+  def test_ragent_ignored_returns_false_when_gitignore_absent
+    Dir.mktmpdir do |dir|
+      refute Ragent::Workspace.ragent_ignored?(dir)
+    end
+  end
+
+  def test_ragent_ignored_returns_false_when_entry_missing
+    Dir.mktmpdir do |dir|
+      File.write(File.join(dir, '.gitignore'), "*.log\n")
+      refute Ragent::Workspace.ragent_ignored?(dir)
+    end
+  end
+
+  def test_ragent_ignored_returns_true_with_trailing_slash
+    Dir.mktmpdir do |dir|
+      File.write(File.join(dir, '.gitignore'), ".ragent/\n")
+      assert Ragent::Workspace.ragent_ignored?(dir)
+    end
+  end
+
+  def test_ragent_ignored_returns_true_without_trailing_slash
+    Dir.mktmpdir do |dir|
+      File.write(File.join(dir, '.gitignore'), ".ragent\n")
+      assert Ragent::Workspace.ragent_ignored?(dir)
+    end
+  end
+
   def test_ensure_ragent_ignored_creates_gitignore_when_absent
     Dir.mktmpdir do |dir|
       Ragent::Workspace.ensure_ragent_ignored!(dir)

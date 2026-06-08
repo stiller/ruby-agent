@@ -77,6 +77,30 @@ if ARGV[0] == 'rollback'
   exit 0
 end
 
+if ARGV[0] == 'init'
+  begin
+    workspace = Ragent::Workspace.validate!(options[:workspace])
+  rescue Ragent::WorkspaceError => e
+    warn "Error: #{e.message}"
+    exit 1
+  end
+
+  agents_file = File.join(workspace, '.ragent', 'AGENTS.md')
+  unless File.exist?(agents_file)
+    FileUtils.mkdir_p(File.dirname(agents_file))
+    File.write(agents_file, "# Agent Instructions\n\nAdd custom instructions for the ragent coding agent here.\n")
+    warn "Created #{agents_file}"
+  end
+
+  if Ragent::Workspace.ragent_ignored?(workspace)
+    warn '`.ragent/` is already in `.gitignore`.'
+  else
+    Ragent::Workspace.ensure_ragent_ignored!(workspace)
+    warn 'Added `.ragent/` to `.gitignore`.'
+  end
+  exit 0
+end
+
 begin
   workspace = Ragent::Workspace.validate!(options[:workspace])
 rescue Ragent::WorkspaceError => e

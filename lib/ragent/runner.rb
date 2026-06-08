@@ -105,9 +105,12 @@ module Ragent
 
   def self.run(prompt, workspace: Workspace::DEFAULT_PATH, auto_approve: false, keep_runs: true,
                allow_commands: false, artifact_dir: nil, allow_external_artifacts: false)
-    Workspace.ensure_ragent_ignored!(workspace)
     transcript = build_transcript(workspace, artifact_dir: artifact_dir,
                                              allow_external_artifacts: allow_external_artifacts)
+    unless Workspace.ragent_ignored?(workspace)
+      warn 'Warning: `.ragent/` is not gitignored. Run `ragent init` to add it.'
+    end
+
     Terminal.debug("run_dir=#{transcript.run_dir}")
     config = Config.new(workspace)
     approver = PatchApprover.new(auto_approve: auto_approve || config.approval_mode == 'auto')

@@ -22,7 +22,9 @@ module Ragent
     end
 
     def run
-      Workspace.ensure_ragent_ignored!(@workspace)
+      unless Workspace.ragent_ignored?(@workspace)
+        @output.puts 'Warning: `.ragent/` is not gitignored. Run `ragent init` to add it.'
+      end
       @output.puts 'ragent interactive — type a task, /help for commands, /exit to quit.'
       loop do
         prompt = read_prompt

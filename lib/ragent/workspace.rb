@@ -15,6 +15,15 @@ module Ragent
       path
     end
 
+    def self.ragent_ignored?(path)
+      gitignore = File.join(path, '.gitignore')
+      return false unless File.exist?(gitignore)
+
+      File.read(gitignore).lines.any? { |l| [GITIGNORE_ENTRY, '.ragent'].include?(l.chomp) }
+    rescue Errno::EACCES, Errno::EPERM
+      false
+    end
+
     def self.ensure_ragent_ignored!(path)
       gitignore = File.join(path, '.gitignore')
       existing = File.exist?(gitignore) ? File.read(gitignore) : ''
