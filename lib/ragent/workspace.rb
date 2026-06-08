@@ -8,7 +8,6 @@ module Ragent
   module Workspace
     DEFAULT_PATH = ENV.fetch('RAGENT_WORKSPACE', '/workspace')
     GITIGNORE_ENTRY = '.ragent/'
-    READONLY_RUNS_DIR = '/tmp/ragent-runs'
 
     def self.validate!(path)
       raise WorkspaceError, "repo root '#{path}' does not exist or is not a directory" unless Dir.exist?(path)
@@ -26,13 +25,28 @@ module Ragent
       nil
     end
 
-    def self.resolve_runs_dir(workspace)
-      path = File.join(workspace, '.ragent', 'runs')
-      FileUtils.mkdir_p(path)
-      path
-    rescue Errno::EROFS, Errno::EACCES, Errno::EPERM
-      warn "Workspace is read-only; run artifacts stored at #{READONLY_RUNS_DIR} (ephemeral)"
-      READONLY_RUNS_DIR
+    def self.resolve_artifact_dir(workspace, artifact_dir: nil, allow_external: false)
+      if artifact_dir
+        resolved = File.expand_path(artifact_dir)
+        workspace_abs = File.expand_path(workspace)
+        inside = resolved.start_with?("#{workspace_abs}#{File::SEPARATOR}") || resolved == workspace_abs
+        unless inside || allow_external
+          raise WorkspaceError,
+                "'#{artifact_dir}' is outside the repository; pass --allow-external-artifacts to use it"
+        end
+        FileUtils.mkdir_p(resolved)
+        resolved
+      else
+        path = File.join(workspace, '.ragent', 'runs')
+        FileUtils.mkdir_p(path)
+        return nil unless File.writable?(path)
+
+        path
+      end
+    rescue Errno::EROFS, Errno::EACCES, Errno::EPERM => e
+      raise WorkspaceError, "cannot write to artifact dir: #{e.message}" if artifact_dir
+
+      nil
     end
   end
 end

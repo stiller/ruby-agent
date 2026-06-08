@@ -5,7 +5,8 @@ module Ragent
     PROMPT = '>> '
 
     def initialize(workspace:, auto_approve:, allow_commands:, config:,
-                   input: $stdin, output: $stderr, model_client: nil)
+                   input: $stdin, output: $stderr, model_client: nil,
+                   artifact_dir: nil, allow_external_artifacts: false)
       @workspace = workspace
       @auto_approve = auto_approve
       @allow_commands = allow_commands
@@ -14,7 +15,8 @@ module Ragent
       @output = output
       @model_client = model_client
       @history = nil
-      @transcript = Transcript.new(runs_dir: Workspace.resolve_runs_dir(workspace))
+      @transcript = Ragent.send(:build_transcript, workspace, artifact_dir: artifact_dir,
+                                                              allow_external_artifacts: allow_external_artifacts)
     end
 
     def run

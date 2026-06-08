@@ -43,6 +43,10 @@ module Ragent
       )
     end
 
+    def persistent?
+      true
+    end
+
     def close
       @file.close
     end

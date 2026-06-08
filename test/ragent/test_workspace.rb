@@ -81,28 +81,63 @@ class TestWorkspace < Minitest::Test
     end
   end
 
-  def test_resolve_runs_dir_returns_path_under_workspace
+  def test_resolve_artifact_dir_defaults_to_ragent_runs_under_workspace
     Dir.mktmpdir do |dir|
-      result = Ragent::Workspace.resolve_runs_dir(dir)
+      result = Ragent::Workspace.resolve_artifact_dir(dir)
       assert result.start_with?(dir), "expected #{result} to be under #{dir}"
-    end
-  end
-
-  def test_resolve_runs_dir_creates_the_directory
-    Dir.mktmpdir do |dir|
-      result = Ragent::Workspace.resolve_runs_dir(dir)
       assert Dir.exist?(result)
     end
   end
 
-  def test_resolve_runs_dir_falls_back_for_read_only_workspace
+  def test_resolve_artifact_dir_returns_nil_for_read_only_workspace
     skip 'cannot test read-only filesystem as root' if Process.uid.zero?
     Dir.mktmpdir do |dir|
       FileUtils.chmod(0o555, dir)
-      result = Ragent::Workspace.resolve_runs_dir(dir)
-      assert_equal Ragent::Workspace::READONLY_RUNS_DIR, result
+      result = Ragent::Workspace.resolve_artifact_dir(dir)
+      assert_nil result
     ensure
       FileUtils.chmod(0o755, dir)
+    end
+  end
+
+  def test_resolve_artifact_dir_returns_nil_when_runs_dir_exists_but_not_writable
+    skip 'cannot test read-only filesystem as root' if Process.uid.zero?
+    Dir.mktmpdir do |dir|
+      runs_dir = File.join(dir, '.ragent', 'runs')
+      FileUtils.mkdir_p(runs_dir)
+      FileUtils.chmod(0o555, runs_dir)
+      result = Ragent::Workspace.resolve_artifact_dir(dir)
+      assert_nil result
+    ensure
+      FileUtils.chmod(0o755, runs_dir)
+    end
+  end
+
+  def test_resolve_artifact_dir_explicit_internal_path
+    Dir.mktmpdir do |dir|
+      artifact_dir = File.join(dir, 'my-artifacts')
+      result = Ragent::Workspace.resolve_artifact_dir(dir, artifact_dir: artifact_dir)
+      assert_equal File.expand_path(artifact_dir), result
+      assert Dir.exist?(result)
+    end
+  end
+
+  def test_resolve_artifact_dir_external_path_requires_flag
+    Dir.mktmpdir do |workspace|
+      Dir.mktmpdir do |external|
+        assert_raises(Ragent::WorkspaceError) do
+          Ragent::Workspace.resolve_artifact_dir(workspace, artifact_dir: external)
+        end
+      end
+    end
+  end
+
+  def test_resolve_artifact_dir_external_path_allowed_with_flag
+    Dir.mktmpdir do |workspace|
+      Dir.mktmpdir do |external|
+        result = Ragent::Workspace.resolve_artifact_dir(workspace, artifact_dir: external, allow_external: true)
+        assert_equal File.expand_path(external), result
+      end
     end
   end
 end

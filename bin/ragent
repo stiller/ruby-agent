@@ -11,7 +11,9 @@ options = {
   keep_runs: true,
   allow_commands: false,
   color: $stderr.isatty && ENV['NO_COLOR'].nil?,
-  debug: false
+  debug: false,
+  artifact_dir: nil,
+  allow_external_artifacts: false
 }
 
 OptionParser.new do |opts|
@@ -33,6 +35,12 @@ OptionParser.new do |opts|
   end
   opts.on('--debug', 'Print debug info: request metadata, tool call JSON, truncation notices') do
     options[:debug] = true
+  end
+  opts.on('--artifact-dir PATH', 'Directory for run artifacts (default: <repo>/.ragent/runs/)') do |path|
+    options[:artifact_dir] = path
+  end
+  opts.on('--allow-external-artifacts', 'Allow --artifact-dir to point outside the repository') do
+    options[:allow_external_artifacts] = true
   end
 end.parse!
 
@@ -85,7 +93,9 @@ if prompt.nil? || prompt.strip.empty?
       workspace: workspace,
       auto_approve: options[:auto_approve],
       allow_commands: options[:allow_commands],
-      config: config
+      config: config,
+      artifact_dir: options[:artifact_dir],
+      allow_external_artifacts: options[:allow_external_artifacts]
     ).run
   rescue Ragent::ConfigError => e
     warn "Error in #{Ragent::Config::FILENAME}: #{e.message}"
@@ -100,7 +110,9 @@ begin
     workspace: workspace,
     auto_approve: options[:auto_approve],
     keep_runs: options[:keep_runs],
-    allow_commands: options[:allow_commands]
+    allow_commands: options[:allow_commands],
+    artifact_dir: options[:artifact_dir],
+    allow_external_artifacts: options[:allow_external_artifacts]
   )
 rescue Ragent::ConfigError => e
   warn "Error in #{Ragent::Config::FILENAME}: #{e.message}"

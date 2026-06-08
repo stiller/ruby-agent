@@ -101,9 +101,11 @@ module Ragent
     )
   ].freeze
 
-  def self.run(prompt, workspace: Workspace::DEFAULT_PATH, auto_approve: false, keep_runs: true, allow_commands: false)
+  def self.run(prompt, workspace: Workspace::DEFAULT_PATH, auto_approve: false, keep_runs: true,
+               allow_commands: false, artifact_dir: nil, allow_external_artifacts: false)
     Workspace.ensure_ragent_ignored!(workspace)
-    transcript = Transcript.new(runs_dir: Workspace.resolve_runs_dir(workspace))
+    transcript = build_transcript(workspace, artifact_dir: artifact_dir,
+                                             allow_external_artifacts: allow_external_artifacts)
     Terminal.debug("run_dir=#{transcript.run_dir}")
     config = Config.new(workspace)
     approver = PatchApprover.new(auto_approve: auto_approve || config.approval_mode == 'auto')
@@ -118,7 +120,9 @@ module Ragent
     print_result(loop.run)
   ensure
     transcript&.close
-    keep_runs ? warn("Run artifacts kept at: #{transcript&.run_dir}") : FileUtils.rm_rf(transcript&.run_dir)
+    if transcript&.persistent?
+      keep_runs ? warn("Run artifacts kept at: #{transcript.run_dir}") : FileUtils.rm_rf(transcript.run_dir)
+    end
   end
 
   def self.build_loop(prompt, workspace, transcript, approver, command_approver,
@@ -139,6 +143,19 @@ module Ragent
     )
   end
   private_class_method :build_loop
+
+  def self.build_transcript(workspace, artifact_dir: nil, allow_external_artifacts: false)
+    runs_dir = Workspace.resolve_artifact_dir(workspace,
+                                              artifact_dir: artifact_dir,
+                                              allow_external: allow_external_artifacts)
+    if runs_dir
+      Transcript.new(runs_dir: runs_dir)
+    else
+      warn 'Run artifacts disabled: workspace is not writable. Use --artifact-dir to store them elsewhere.'
+      NullTranscript.new
+    end
+  end
+  private_class_method :build_transcript
 
   def self.load_instructions(workspace)
     entries = AgentInstructions.new(workspace).load
@@ -260,8 +277,13 @@ module Ragent
   end
   private_class_method :apply_approved_patch
 
+  READONLY_PATCH_ERROR = 'Workspace is read-only; patches cannot be saved or applied. ' \
+                         'Re-run with a writable workspace or use --artifact-dir.'
+
   def self.build_patch_handler(workspace, run_dir, approver)
     lambda do |diff|
+      return READONLY_PATCH_ERROR unless run_dir
+
       proposal = Tools::ProposePatch.new(workspace, run_dir: run_dir).call(diff)
       return proposal.to_s unless proposal.is_a?(Tools::ProposePatch::Result)
 
@@ -272,6 +294,8 @@ module Ragent
 
   def self.build_replace_handler(workspace, run_dir, approver)
     lambda do |path, old_text, new_text|
+      return READONLY_PATCH_ERROR unless run_dir
+
       result = Tools::ReplaceInFile.new(workspace, run_dir: run_dir).call(path, old_text, new_text)
       return result.to_s unless result.is_a?(Tools::ReplaceInFile::Result)
 
@@ -282,6 +306,8 @@ module Ragent
 
   def self.build_replace_all_handler(workspace, run_dir, approver)
     lambda do |path, old_text, new_text|
+      return READONLY_PATCH_ERROR unless run_dir
+
       result = Tools::ReplaceAllInFile.new(workspace, run_dir: run_dir).call(path, old_text, new_text)
       return result.to_s unless result.is_a?(Tools::ReplaceAllInFile::Result)
 

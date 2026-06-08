@@ -31,6 +31,8 @@ bin/ragent --repo /path/to/repo "explain what this project does"
 | `--yes` | Auto-approve all proposed patches without prompting |
 | `--allow-commands` | Allow the agent to propose and run shell commands |
 | `--clean-runs` | Delete run artifacts after the session ends |
+| `--artifact-dir PATH` | Store run artifacts in a custom directory (default: `<repo>/.ragent/runs/`) |
+| `--allow-external-artifacts` | Allow `--artifact-dir` to point outside the repository |
 
 Run artifacts (transcript, patches, checkpoint) are written to
 `<repo>/.ragent/runs/<timestamp>/` and kept after the session for inspection and rollback.
@@ -257,7 +259,16 @@ docker compose -f docker-compose.yml -f docker-compose.ro.yml run --rm ragent \
 ```
 
 In this mode the agent can explore and propose patches but cannot apply them.
-Run artifacts go to `/tmp/ragent-runs` inside the container and are lost when it exits.
+Run artifacts (transcript, patches) are disabled — the workspace is read-only, so
+ragent falls back to a null transcript and prints a warning. Use `--artifact-dir`
+with a writable path to preserve artifacts in read-only mode:
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.ro.yml run --rm \
+  -v /tmp/ragent-runs:/runs ragent \
+  --artifact-dir /runs --allow-external-artifacts \
+  "explain what this project does"
+```
 
 ### Network-off mode
 
