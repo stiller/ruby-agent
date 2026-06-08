@@ -19,7 +19,7 @@ All examples below assume you are in the `ruby-agent` repository root.
 ## Phase 1 — Read-only exploration
 
 Mount the repository read-only so the agent can look around but cannot change
-anything. This is the safe default for getting familiar with a codebase.
+anything. This is the safer starting point for getting familiar with a codebase.
 
 ```bash
 WORKSPACE_PATH=$(pwd) docker compose -f docker-compose.yml -f docker-compose.ro.yml \
@@ -28,7 +28,8 @@ WORKSPACE_PATH=$(pwd) docker compose -f docker-compose.yml -f docker-compose.ro.
 
 > **Safety**: `/workspace` is read-only. The agent can read files, run searches,
 > and propose patches, but cannot apply them. Any `bundle exec` or `git` commands
-> it proposes will also be sandboxed to the container.
+> it proposes run inside the container, but this is containment rather than hard
+> sandboxing.
 
 ### Suggested prompts
 

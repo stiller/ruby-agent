@@ -208,7 +208,7 @@ patch was applied.
 ## Running Tests
 
 ```bash
-bundle exec rake
+bundle exec rake test
 ```
 
 To run a single test file:
@@ -231,6 +231,25 @@ docker compose build
 docker compose run --rm ragent "hello"
 ```
 
+Docker mode is **containment, not hard sandboxing**. The default Compose setup is
+designed for practical development: it can build native gems, write generated
+files and caches, run test tooling, and reach the model API. Its safety boundary
+is mostly approval UX, Docker isolation, resource limits, and not mounting
+secrets into the container.
+
+### Docker modes
+
+| Mode | Command shape | Workspace | Commands | Network |
+|---|---|---|---|---|
+| `inspect` | `docker compose -f docker-compose.yml -f docker-compose.ro.yml run --rm ragent "..."` | Read-only | Not enabled | Default |
+| `develop` | `docker compose run --rm ragent --allow-commands "..."` | Read-write | Prompt for approval | Default |
+| `danger` | `docker compose run --rm ragent --yes --allow-commands "..."` | Read-write | Auto-approved, except built-in dangerous-command rejection | Default |
+| `offline` | `docker compose -f docker-compose.yml -f docker-compose.nonet.yml run --rm ragent "..."` | Read-write unless combined with `docker-compose.ro.yml` | Not enabled unless `--allow-commands` is passed | Disabled |
+
+The plain default command (`docker compose run --rm ragent "..."`) uses a
+read-write workspace, prompts before applying patches, and does not allow shell
+commands. Use the named modes above to make the tradeoff explicit.
+
 `/workspace` is mounted **read-write** by default so the agent can apply patches
 and write run artifacts to `<workspace>/.ragent/runs/`.
 
@@ -249,7 +268,7 @@ workspace root the CLI uses. Set it permanently in a `.env` file:
 WORKSPACE_PATH=/path/to/your/repo
 ```
 
-### Read-only mode
+### Inspect mode: read-only workspace
 
 To prevent the agent from writing to the workspace at all, use the read-only override:
 
@@ -270,7 +289,7 @@ docker compose -f docker-compose.yml -f docker-compose.ro.yml run --rm \
   "explain what this project does"
 ```
 
-### Network-off mode
+### Offline mode: network off
 
 For maximum isolation, disable all container networking:
 
@@ -281,7 +300,7 @@ docker compose -f docker-compose.yml -f docker-compose.nonet.yml run --rm ragent
 The container gets no network interfaces at all — not even loopback — so it cannot
 reach the OpenAI API or any other external service.
 
-**Model clients compatible with network-off mode:**
+**Model clients compatible with offline mode:**
 
 | Client | How to use |
 |---|---|
@@ -299,7 +318,8 @@ docker compose -f docker-compose.yml -f docker-compose.nonet.yml run --rm ragent
 
 ### Security hardening
 
-The default `docker-compose.yml` applies several restrictions:
+The default `docker-compose.yml` applies several containment restrictions. These
+settings are useful guardrails, but they are not a hard sandbox:
 
 | Control | Setting |
 |---|---|
