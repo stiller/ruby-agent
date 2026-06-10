@@ -9,7 +9,7 @@ module Ragent
 
   class OpenAIClient < ModelClient
     DEFAULT_BASE_URL = 'https://api.openai.com'
-    DEFAULT_MODEL = 'gpt-4o'
+    DEFAULT_MODEL = 'gpt-5.5'
     MAX_RETRIES = 3
 
     def initialize(

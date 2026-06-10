@@ -143,7 +143,7 @@ variables before running:
 |---|---|---|
 | `OPENAI_API_KEY` | — | Required to use the real model. Falls back to a fake client when unset. |
 | `OPENAI_BASE_URL` | `https://api.openai.com` | Override for local models or compatible APIs (Ollama, LM Studio, etc.). |
-| `RAGENT_MODEL` | `gpt-4o` | Model name passed in every request. |
+| `RAGENT_MODEL` | `gpt-5.5` | Model name passed in every request. |
 
 ### Using a real model
 
