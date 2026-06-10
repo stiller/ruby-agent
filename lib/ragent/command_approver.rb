@@ -14,7 +14,8 @@ module Ragent
       @output.puts "\n#{Terminal.section('Proposed command')}"
       @output.puts Terminal.fmt("$ #{proposal.command}", :bold)
       @output.puts "Reason: #{proposal.reason}"
-      return true if @auto_approve && @allow_commands
+      return false unless @allow_commands
+      return true if @auto_approve
       return true if allowlisted?(proposal.command)
 
       @output.print 'Run this command? [y/N] '
