@@ -1,6 +1,6 @@
 # Ruby Agent
 
-An agentic coding harness written in plain Ruby.
+An interactive agentic coding assistant written in plain Ruby. Point it at a repository, describe a task, and it reads, edits, and verifies the code — one approved patch at a time.
 
 <img width="758" height="450" alt="Screenshot 2026-06-06 at 18 14 59" src="https://github.com/user-attachments/assets/c308bd49-9469-42df-b048-b40b97733626" />
 
@@ -54,7 +54,7 @@ flowchart TD
 
 **Transcript** records the prompt, every model response, and every tool result to a timestamped run directory under `.ragent/runs/` for inspection. When the workspace is read-only a `NullTranscript` is used instead.
 
-**REPL mode** (no prompt argument) wraps the loop with a readline-style interface that feeds conversation history back into each new turn, maintaining multi-turn context within a session.
+**REPL mode** wraps the loop in an interactive session: each new prompt appends to the growing message history, so follow-up tasks have full context from earlier turns.
 
 ## Setup
 
@@ -65,11 +65,45 @@ chmod +x bin/ragent
 
 ## Usage
 
-Pass a prompt as the first argument:
+### Interactive mode (REPL)
+
+The primary way to use ragent is interactively. Run it with no prompt argument and it starts a session where you can give tasks one at a time, with the full conversation history carried forward between turns:
+
+```bash
+bin/ragent --repo /path/to/repo
+```
+
+```
+ragent interactive — type a task, /help for commands, /exit to quit.
+>> explain what the auth flow does
+...
+>> now add a test for the edge case you just described
+...
+>> /exit
+
+Bye.
+```
+
+Paste support is built in — multi-line prompts work without any escaping.
+
+REPL commands:
+
+| Command | Description |
+|---|---|
+| `/tools` | List available tools |
+| `/status` | Show repo path, approval mode, and history length |
+| `/help` | Show command reference |
+| `/exit` | Quit (also `/quit` or Ctrl-D) |
+
+### Single-shot mode
+
+Pass a prompt directly to run a single task and exit:
 
 ```bash
 bin/ragent --repo /path/to/repo "explain what this project does"
 ```
+
+This is useful for scripting or one-off tasks where you don't need a back-and-forth session.
 
 ### Options
 
