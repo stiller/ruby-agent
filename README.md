@@ -8,6 +8,54 @@ An agentic coding harness written in plain Ruby.
 
 <img width="756" height="214" alt="Screenshot 2026-06-06 at 18 16 42" src="https://github.com/user-attachments/assets/7630399c-a351-484c-99c9-06b5792d7ce5" />
 
+## How it works
+
+Ragent sends a prompt to an OpenAI-compatible model and lets it work autonomously through a set of read and write tools until it produces a final answer.
+
+```mermaid
+flowchart TD
+    User([User prompt]) --> Loop
+
+    subgraph Loop[AgentLoop]
+        direction TB
+        Model[Model API] -->|tool_call| Registry[ToolRegistry]
+        Registry -->|result| Model
+        Model -->|final| Answer([Answer])
+    end
+
+    subgraph Tools[Tools]
+        direction LR
+        R[list_files\nread_file\nsearch_text]
+        W[propose_patch\nreplace_in_file\nreplace_all_in_file\npropose_command]
+    end
+
+    Registry --> Tools
+
+    subgraph Approvals[Approval]
+        PA[PatchApprover]
+        CA[CommandApprover]
+    end
+
+    W --> Approvals
+    Approvals -->|patch| Checkpoint
+    Checkpoint -->|git checkpoint| Workspace[(Workspace)]
+    R --> Workspace
+
+    Loop --> Transcript[(Transcript\nrun artifacts)]
+```
+
+**AgentLoop** drives the conversation: it sends the growing message history to the model, receives either a `tool_call` or a `final` response, and loops until it gets a final answer (or hits the iteration limit).
+
+**ToolRegistry** maps tool names to handler lambdas. On a tool call, the loop dispatches to the registry, appends the result to the message history, and calls the model again.
+
+**Tools** are split into read-only exploration (`list_files`, `read_file`, `search_text`) and write operations (`propose_patch`, `replace_in_file`, `replace_all_in_file`, `propose_command`). Write tools go through an approver before touching the workspace.
+
+**Approvers** (`PatchApprover`, `CommandApprover`) prompt the user for confirmation, auto-approve when `--yes` is set, or consult the allowlist in `.ragent.yml`. Before a patch is applied, a `Checkpoint` saves the current git state so changes can be rolled back.
+
+**Transcript** records the prompt, every model response, and every tool result to a timestamped run directory under `.ragent/runs/` for inspection. When the workspace is read-only a `NullTranscript` is used instead.
+
+**REPL mode** (no prompt argument) wraps the loop with a readline-style interface that feeds conversation history back into each new turn, maintaining multi-turn context within a session.
+
 ## Setup
 
 ```bash
