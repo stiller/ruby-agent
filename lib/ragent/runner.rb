@@ -282,8 +282,8 @@ module Ragent
   end
   private_class_method :apply_approved_patch
 
-  READONLY_PATCH_ERROR = 'Workspace is read-only; patches cannot be saved or applied. ' \
-                         'Re-run with a writable workspace or use --artifact-dir.'
+  READONLY_PATCH_ERROR = 'Workspace is read-only; patches cannot be applied. ' \
+                         'Re-run with a writable workspace to apply patches.'
 
   def self.build_patch_handler(workspace, run_dir, approver)
     lambda do |diff|

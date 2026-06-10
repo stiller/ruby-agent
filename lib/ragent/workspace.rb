@@ -36,8 +36,8 @@ module Ragent
 
     def self.resolve_artifact_dir(workspace, artifact_dir: nil, allow_external: false)
       if artifact_dir
-        resolved = File.expand_path(artifact_dir)
         workspace_abs = File.expand_path(workspace)
+        resolved = File.expand_path(artifact_dir, workspace_abs)
         inside = resolved.start_with?("#{workspace_abs}#{File::SEPARATOR}") || resolved == workspace_abs
         unless inside || allow_external
           raise WorkspaceError,

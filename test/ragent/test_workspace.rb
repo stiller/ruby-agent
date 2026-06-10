@@ -149,6 +149,23 @@ class TestWorkspace < Minitest::Test
     end
   end
 
+  def test_resolve_artifact_dir_relative_path_resolved_from_workspace
+    Dir.mktmpdir do |dir|
+      result = Ragent::Workspace.resolve_artifact_dir(dir, artifact_dir: 'artifacts')
+      assert_equal File.join(dir, 'artifacts'), result
+      assert Dir.exist?(result)
+    end
+  end
+
+  def test_resolve_artifact_dir_relative_path_not_resolved_from_cwd
+    Dir.mktmpdir do |dir|
+      Dir.mktmpdir do |_other_cwd|
+        result = Ragent::Workspace.resolve_artifact_dir(dir, artifact_dir: 'artifacts')
+        assert result.start_with?(dir), "expected #{result} to be under workspace #{dir}"
+      end
+    end
+  end
+
   def test_resolve_artifact_dir_external_path_requires_flag
     Dir.mktmpdir do |workspace|
       Dir.mktmpdir do |external|
