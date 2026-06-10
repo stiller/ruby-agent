@@ -68,6 +68,15 @@ class TestCommandApprover < Minitest::Test
     refute approver.call(proposal)
   end
 
+  def test_allowlisted_command_approved_when_allow_commands_true
+    approver = Ragent::CommandApprover.new(
+      allow_commands: true,
+      allowed_commands: ['echo hello'],
+      input: StringIO.new(''), output: StringIO.new
+    )
+    assert approver.call(proposal)
+  end
+
   def test_allowlisted_exact_command_auto_approves
     approver = approver_with_allowlist(['echo hello'], input: '')
     assert approver.call(proposal)
